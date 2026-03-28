@@ -1,14 +1,16 @@
-import { Search, MessageSquare, Bell } from 'lucide-react';
-import { View } from '../../types';
+import { Search, MessageSquare, Bell, LogOut } from 'lucide-react';
+import { View, UserProfile } from '../../types';
 import { MOCK_USER } from '../../data/mockData';
 
 interface TopNavProps {
   currentView: View;
   setView: (v: View) => void;
   onProfileClick: () => void;
+  onLogout: () => void;
+  user?: UserProfile | null;
 }
 
-const TopNav = ({ currentView, setView, onProfileClick }: TopNavProps) => (
+const TopNav = ({ currentView, setView, onProfileClick, onLogout, user }: TopNavProps) => (
   <header className="fixed top-0 w-full z-50 glass-nav px-6 h-16 flex justify-between items-center">
     <div className="flex items-center gap-8">
       <span className="font-elephant text-2xl font-bold text-primary cursor-pointer" onClick={() => setView('newsfeed')}>Social</span>
@@ -45,8 +47,11 @@ const TopNav = ({ currentView, setView, onProfileClick }: TopNavProps) => (
         <button className="p-2 text-outline hover:bg-surface-container rounded-full transition-colors" onClick={() => setView('notifications')}>
           <Bell className="w-5 h-5" />
         </button>
+        <button className="p-2 text-outline hover:bg-surface-container rounded-full transition-colors" onClick={onLogout} title="Logout">
+          <LogOut className="w-5 h-5" />
+        </button>
         <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest flex-shrink-0 cursor-pointer border-2 border-primary/10" onClick={onProfileClick}>
-          <img alt="User Profile" src={MOCK_USER.avatar} referrerPolicy="no-referrer" />
+          <img alt="User Profile" src={user?.avatar || MOCK_USER.avatar} referrerPolicy="no-referrer" />
         </div>
       </div>
     </nav>

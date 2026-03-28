@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Rss, User, MessageSquare, Search, Bookmark, Settings } from 'lucide-react';
-import { View } from '../../types';
+import { View, UserProfile } from '../../types';
 import { MOCK_USER } from '../../data/mockData';
 
 interface SidebarProps {
@@ -8,6 +8,7 @@ interface SidebarProps {
   setView: (v: View) => void;
   onOpenCreate: () => void;
   onProfileClick: () => void;
+  user?: UserProfile | null;
 }
 
 const SidebarLink = ({ active, icon, label, onClick }: { active: boolean, icon: ReactNode, label: string, onClick: () => void }) => (
@@ -20,16 +21,16 @@ const SidebarLink = ({ active, icon, label, onClick }: { active: boolean, icon: 
   </button>
 );
 
-const Sidebar = ({ currentView, setView, onOpenCreate, onProfileClick }: SidebarProps) => (
+const Sidebar = ({ currentView, setView, onOpenCreate, onProfileClick, user }: SidebarProps) => (
   <aside className="hidden md:flex flex-col gap-4 sticky top-24 h-[calc(100vh-120px)] overflow-y-auto">
     <div className="flex flex-col gap-4 p-4 bg-surface-container-low rounded-xl">
       <div className="flex items-center gap-3 px-2 mb-4 cursor-pointer" onClick={onProfileClick}>
         <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-primary/10">
-          <img alt="User Avatar" src={MOCK_USER.avatar} referrerPolicy="no-referrer" />
+          <img alt="User Avatar" src={user?.avatar || MOCK_USER.avatar} referrerPolicy="no-referrer" />
         </div>
         <div>
-          <h3 className="font-headline font-bold text-sm text-on-surface">{MOCK_USER.name}</h3>
-          <p className="text-xs text-outline">{MOCK_USER.role}</p>
+          <h3 className="font-headline font-bold text-sm text-on-surface">{user?.name || MOCK_USER.name}</h3>
+          <p className="text-xs text-outline">{user?.role || MOCK_USER.role}</p>
         </div>
       </div>
       <nav className="flex flex-col gap-1">
