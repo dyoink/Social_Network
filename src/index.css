@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline: "Plus Jakarta Sans", sans-serif;
+  --font-elephant: "Elephant", serif;
+
+  --color-primary: #0058be;
+  --color-primary-container: #2170e4;
+  --color-on-primary: #ffffff;
+  
+  --color-secondary: #505f76;
+  --color-secondary-container: #d0e1fb;
+  --color-on-secondary-container: #54647a;
+
+  --color-tertiary: #924700;
+  --color-tertiary-container: #b75b00;
+
+  --color-surface: #f7f9fb;
+  --color-surface-bright: #f7f9fb;
+  --color-surface-dim: #d8dadc;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f4f6;
+  --color-surface-container: #eceef0;
+  --color-surface-container-high: #e6e8ea;
+  --color-surface-container-highest: #e0e3e5;
+
+  --color-on-surface: #191c1e;
+  --color-on-surface-variant: #424754;
+  --color-outline: #727785;
+  --color-outline-variant: #c2c6d6;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline tracking-tight;
+  }
+}
+
+@layer components {
+  .glass-nav {
+    @apply bg-white/80 backdrop-blur-xl shadow-xl shadow-blue-500/5;
+  }
+  
+  .surface-elevation-tonal {
+    @apply shadow-xl shadow-blue-500/5;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-br from-primary to-primary-container text-white rounded-full font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all hover:brightness-110;
+  }
+}
+
+/* Fallback for Elephant font if not available locally */
+@font-face {
+  font-family: 'Elephant';
+  src: local('Times New Roman');
+}
