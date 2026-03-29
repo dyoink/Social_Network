@@ -14,10 +14,6 @@ const TopNav = ({ currentView, setView, onProfileClick, onLogout, user }: TopNav
   <header className="fixed top-0 w-full z-50 glass-nav px-6 h-16 flex justify-between items-center">
     <div className="flex items-center gap-8">
       <span className="font-elephant text-2xl font-bold text-primary cursor-pointer" onClick={() => setView('newsfeed')}>Social</span>
-      <div className="hidden md:flex items-center bg-surface-container-low px-4 py-2 rounded-full gap-2">
-        <Search className="w-4 h-4 text-outline" />
-        <input className="bg-transparent border-none focus:ring-0 text-sm w-64 placeholder:text-outline" placeholder="Search social..." type="text" />
-      </div>
     </div>
     <nav className="flex items-center gap-6">
       <div className="hidden lg:flex items-center gap-6">

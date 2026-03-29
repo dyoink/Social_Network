@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react';
 import { MOCK_POSTS, MOCK_USERS } from '../../data/mockData';
 import { Post, UserProfile } from '../../types';
 import PostCard from '../feed/PostCard';
@@ -20,6 +21,16 @@ const UserCard = ({ user, onUserClick }: { user: UserProfile, onUserClick: (u: U
 
 const SearchView = ({ onCommentClick, onUserClick }: { onCommentClick?: (post: Post) => void, onUserClick: (u: UserProfile) => void }) => (
   <div className="flex flex-col gap-8">
+    <div className="bg-surface-container-lowest p-6 rounded-3xl surface-elevation-tonal border border-outline-variant/10">
+      <div className="relative max-w-2xl mx-auto">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-outline" />
+        <input 
+          type="text" 
+          placeholder="Search for people, posts, or keywords..." 
+          className="w-full pl-12 pr-4 py-4 bg-surface-container-low border border-transparent focus:border-primary/30 focus:bg-white rounded-2xl outline-none transition-all text-lg"
+        />
+      </div>
+    </div>
     <div className="flex flex-wrap items-center justify-between gap-4">
       <h1 className="font-headline text-3xl font-extrabold text-on-surface tracking-tight">Results for "Social"</h1>
       <div className="flex bg-surface-container-high p-1 rounded-full">
