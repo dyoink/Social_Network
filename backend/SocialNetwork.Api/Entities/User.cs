@@ -20,6 +20,9 @@ namespace SocialNetwork.Api.Entities
 
         [StringLength(100)]
         public string? FullName { get; set; }
+        [Required, DataType(DataType.Date)]
+
+        public DateTime? DateOfBirth { get; set; }
 
         public string? AvatarUrl { get; set; }
         public string? CoverUrl { get; set; }
