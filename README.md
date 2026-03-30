@@ -127,7 +127,7 @@ psql -U admin -d SocialNetworkDb
 1. Trong database, cập nhật role của user thành `Admin`:
 
 ```sql
-UPDATE "Users" SET "Role" = 'Admin' WHERE "Username" = 'gajxinh176';
+UPDATE "Users" SET "Role" = 'Admin' WHERE "Username" = 'UserCuaBan';
 ```
 
 Hoặc dùng API admin (nếu đã là Admin):
