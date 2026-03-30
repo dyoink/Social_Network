@@ -83,6 +83,7 @@ dotnet user-secrets set "Jwt:SecretKey" "SuperSecretKeyAtLeast32Characters!!"
 **Chạy database migration:**
 
 ```bash
+dotnet ef migrations add UpdateSocialModel
 dotnet ef database update
 ```
 
@@ -120,11 +121,13 @@ Frontend chạy tại: **http://localhost:3000**
 ---
 
 ## Truy cập Admin Panel
+psql -U admin -d SocialNetworkDb
+
 
 1. Trong database, cập nhật role của user thành `Admin`:
 
 ```sql
-UPDATE users SET role = 'Admin' WHERE username = 'your_username';
+UPDATE "Users" SET "Role" = 'Admin' WHERE "Username" = 'gajxinh176';
 ```
 
 Hoặc dùng API admin (nếu đã là Admin):

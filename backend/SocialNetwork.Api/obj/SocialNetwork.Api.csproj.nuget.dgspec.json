@@ -1,31 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Source.Net\\Social_Network\\backend\\SocialNetwork.Api\\SocialNetwork.Api.csproj": {}
+    "D:\\TongHop\\Social_Network\\backend\\SocialNetwork.Api\\SocialNetwork.Api.csproj": {}
   },
   "projects": {
-    "D:\\Source.Net\\Social_Network\\backend\\SocialNetwork.Api\\SocialNetwork.Api.csproj": {
+    "D:\\TongHop\\Social_Network\\backend\\SocialNetwork.Api\\SocialNetwork.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Source.Net\\Social_Network\\backend\\SocialNetwork.Api\\SocialNetwork.Api.csproj",
+        "projectUniqueName": "D:\\TongHop\\Social_Network\\backend\\SocialNetwork.Api\\SocialNetwork.Api.csproj",
         "projectName": "SocialNetwork.Api",
-        "projectPath": "D:\\Source.Net\\Social_Network\\backend\\SocialNetwork.Api\\SocialNetwork.Api.csproj",
-        "packagesPath": "C:\\Users\\tranc\\.nuget\\packages\\",
-        "outputPath": "D:\\Source.Net\\Social_Network\\backend\\SocialNetwork.Api\\obj\\",
+        "projectPath": "D:\\TongHop\\Social_Network\\backend\\SocialNetwork.Api\\SocialNetwork.Api.csproj",
+        "packagesPath": "C:\\Users\\ADMIN\\.nuget\\packages\\",
+        "outputPath": "D:\\TongHop\\Social_Network\\backend\\SocialNetwork.Api\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\tranc\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "C:\\Users\\ADMIN\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
