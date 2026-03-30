@@ -98,7 +98,7 @@ dotnet ef database update
 dotnet run
 ```
 
-Backend chạy tại: **http://localhost:5204**
+Backend chạy tại: **http://localhost:5204/scalar**
 
 ### Bước 3 — Cài đặt & chạy Frontend
 
