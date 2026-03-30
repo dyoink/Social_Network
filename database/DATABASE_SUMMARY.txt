@@ -1,0 +1,174 @@
+DATABASE SCHEMA - SOCIAL NETWORK APP
+Database: PostgreSQL | ORM: Entity Framework Core
+
+==================================================
+DANH SÁCH BẢNG (10 bảng)
+==================================================
+
+1. users
+   Lưu thông tin tài khoản người dùng.
+   Columns:
+     id            SERIAL PK
+     username      VARCHAR(50)  UNIQUE NOT NULL
+     email         VARCHAR(100) UNIQUE NOT NULL
+     password_hash TEXT         NOT NULL          -- BCrypt hash
+     full_name     VARCHAR(100)
+     date_of_birth DATE
+     avatar_url    TEXT
+     cover_url     TEXT
+     bio           TEXT
+     role          VARCHAR(50)  DEFAULT 'Member'  -- 'Member' | 'Admin'
+     is_active     BOOLEAN      DEFAULT TRUE       -- FALSE = bị ban bởi Admin
+     created_at    TIMESTAMPTZ  DEFAULT NOW()
+     updated_at    TIMESTAMPTZ  DEFAULT NOW()
+   Relations:
+     1-N -> posts, comments, post_likes,
+            messages (sender), notifications (user & actor)
+     N-N -> follows (self-referencing)
+     N-N -> conversations (via conversation_participants)
+
+2. posts
+   Lưu bài viết của người dùng.
+   Columns:
+     id         SERIAL PK
+     user_id    INTEGER FK -> users(id) ON DELETE CASCADE
+     content    TEXT    NOT NULL
+     image_url  TEXT
+     created_at TIMESTAMPTZ DEFAULT NOW()
+     updated_at TIMESTAMPTZ DEFAULT NOW()
+   Relations:
+     N-1 -> users
+     1-N -> comments, post_likes
+
+3. comments
+   Lưu bình luận và reply (nested).
+   Columns:
+     id         SERIAL PK
+     post_id    INTEGER FK -> posts(id)    ON DELETE CASCADE
+     user_id    INTEGER FK -> users(id)   ON DELETE CASCADE
+     parent_id  INTEGER FK -> comments(id) ON DELETE CASCADE  -- NULL = top-level
+     content    TEXT NOT NULL
+     created_at TIMESTAMPTZ DEFAULT NOW()
+   Relations:
+     N-1 -> posts, users
+     Self-referencing: parent_id -> comments(id)
+
+4. post_likes
+   Bảng trung gian: user nào đã like post nào.
+   Columns:
+     user_id    INTEGER FK -> users(id) ON DELETE CASCADE
+     post_id    INTEGER FK -> posts(id) ON DELETE CASCADE
+     created_at TIMESTAMPTZ DEFAULT NOW()
+     PRIMARY KEY (user_id, post_id)
+   Relations:
+     N-N giữa users và posts
+
+5. follows
+   Quan hệ follow giữa các user (self-referencing N-N).
+   Columns:
+     follower_id  INTEGER FK -> users(id) ON DELETE CASCADE
+     following_id INTEGER FK -> users(id) ON DELETE CASCADE
+     created_at   TIMESTAMPTZ DEFAULT NOW()
+     PRIMARY KEY (follower_id, following_id)
+     CHECK: follower_id <> following_id  -- không tự follow bản thân
+   Relations:
+     Self-referencing với users
+
+6. conversations
+   Nhóm/phòng chat giữa các user.
+   Columns:
+     id         SERIAL PK
+     created_at TIMESTAMPTZ DEFAULT NOW()
+   Relations:
+     1-N -> conversation_participants, messages
+
+7. conversation_participants
+   Bảng trung gian: user nào tham gia conversation nào.
+   Columns:
+     conversation_id INTEGER FK -> conversations(id) ON DELETE CASCADE
+     user_id         INTEGER FK -> users(id)         ON DELETE CASCADE
+     PRIMARY KEY (conversation_id, user_id)
+   Relations:
+     N-N giữa conversations và users
+
+8. messages
+   Tin nhắn trong các cuộc trò chuyện.
+   Columns:
+     id              SERIAL PK
+     conversation_id INTEGER FK -> conversations(id) ON DELETE CASCADE
+     sender_id       INTEGER FK -> users(id)         ON DELETE CASCADE
+     content         TEXT    NOT NULL
+     is_read         BOOLEAN DEFAULT FALSE
+     created_at      TIMESTAMPTZ DEFAULT NOW()
+   Relations:
+     N-1 -> conversations, users
+
+9. notifications
+   Thông báo khi có like, comment, follow.
+   Columns:
+     id                SERIAL PK
+     user_id           INTEGER FK -> users(id) ON DELETE CASCADE  -- người nhận
+     actor_id          INTEGER FK -> users(id) ON DELETE CASCADE  -- người gây ra
+     notification_type VARCHAR(20) NOT NULL  -- 'like'|'comment'|'follow'|'reply'
+     entity_id         INTEGER               -- PostId hoặc CommentId liên quan
+     is_read           BOOLEAN DEFAULT FALSE
+     created_at        TIMESTAMPTZ DEFAULT NOW()
+   Relations:
+     N-1 -> users (cả user_id và actor_id)
+
+10. reports
+   Báo cáo vi phạm do user gửi, admin xử lý.
+   Columns:
+     id              SERIAL PK
+     reporter_id     INTEGER FK -> users(id)  ON DELETE CASCADE     -- người báo cáo
+     target_user_id  INTEGER FK -> users(id)  ON DELETE SET NULL     -- user bị báo cáo (nullable)
+     target_post_id  INTEGER FK -> posts(id)  ON DELETE SET NULL     -- bài bị báo cáo (nullable)
+     reason          VARCHAR(50) NOT NULL  -- 'spam'|'hate'|'nude'|'violence'|'other'
+     detail          TEXT                  -- mô tả thêm (nullable)
+     status          VARCHAR(20) DEFAULT 'Pending'  -- 'Pending'|'Resolved'
+     created_at      TIMESTAMPTZ DEFAULT NOW()
+     resolved_at     TIMESTAMPTZ           -- thời gian admin resolve (nullable)
+   Relations:
+     N-1 -> users (reporter_id), nullable -> users (target_user_id), nullable -> posts (target_post_id)
+
+==================================================
+INDEXES
+==================================================
+  idx_posts_user_id              ON posts(user_id)
+  idx_posts_created_at           ON posts(created_at DESC)
+  idx_comments_post_id           ON comments(post_id)
+  idx_comments_parent_id         ON comments(parent_id)
+  idx_messages_conversation_id   ON messages(conversation_id)
+  idx_messages_created_at        ON messages(created_at DESC)
+  idx_notifications_user_id      ON notifications(user_id)
+  idx_notifications_is_read      ON notifications(user_id, is_read)
+  idx_follows_follower_id        ON follows(follower_id)
+  idx_follows_following_id       ON follows(following_id)
+
+  idx_reports_status      ON reports(status)
+  idx_reports_reporter_id ON reports(reporter_id)
+
+==================================================
+SƠ ĐỒ QUAN HỆ (ERD tóm tắt)
+==================================================
+
+  users ──< posts ──< comments (self-ref)
+    │          └──< post_likes >── users
+    │
+    ├──< follows >── users (self N-N)
+    │
+    ├──< conversation_participants >── conversations ──< messages
+    │
+    ├──< notifications (user_id & actor_id) >── users
+    │
+    └──< reports (reporter_id, target_user_id?) → users
+               reports (target_post_id?) → posts
+
+==================================================
+GHI CHÚ
+==================================================
+- Tất cả timestamps dùng TIMESTAMPTZ (timezone-aware)
+- Xóa cascade từ users sẽ kéo theo toàn bộ dữ liệu liên quan
+- entity_id trong notifications không có FK constraint
+  (để linh hoạt trỏ vào post hoặc comment)
+- date_of_birth trong users không bắt buộc (nullable)

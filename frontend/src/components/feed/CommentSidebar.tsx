@@ -1,67 +1,289 @@
-import { X, ArrowRight } from 'lucide-react';
-import { Post } from '../../types';
-import { MOCK_USER } from '../../data/mockData';
+import { useState, useEffect, useRef } from 'react';
+import React from 'react';
+import { X, ArrowRight, Loader, AlertCircle, CornerDownRight } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { getSocialNetworkApiV1, type PostDto, type CommentDto } from '../../api/api-generated';
+import useAuthStore from '../../store/authStore';
+import { timeAgo } from '../../utils/time';
 
-const SidebarComment = ({ name, text, time, avatar }: { name: string, text: string, time: string, avatar: string }) => (
-  <div className="flex gap-3">
-    <img alt={name} src={avatar} className="w-8 h-8 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" />
-    <div className="flex-1">
-      <div className="bg-surface-container-low rounded-2xl p-3">
-        <h5 className="text-xs font-bold text-on-surface mb-1">{name}</h5>
-        <p className="text-sm text-on-surface-variant leading-snug">{text}</p>
-      </div>
-      <div className="flex items-center gap-4 mt-1 ml-2">
-        <button className="text-[10px] font-bold text-outline hover:text-primary">Like</button>
-        <button className="text-[10px] font-bold text-outline hover:text-primary">Reply</button>
-        <span className="text-[10px] text-outline">{time}</span>
-      </div>
-    </div>
-  </div>
-);
+interface CommentItemProps {
+  comment: CommentDto;
+  onReply: (comment: CommentDto) => void;
+}
 
-const CommentSidebar = ({ post, onClose }: { post: Post, onClose: () => void }) => (
-  <aside className="hidden lg:flex flex-col gap-4 sticky top-24 h-[calc(100vh-120px)] overflow-hidden bg-surface-container-lowest rounded-xl surface-elevation-tonal border border-outline-variant/10">
-    <div className="p-6 border-b border-surface-container flex items-center justify-between">
-      <h3 className="font-headline font-bold text-on-surface">Comments</h3>
-      <button onClick={onClose} className="p-2 hover:bg-surface-container rounded-full transition-colors">
-        <X className="w-5 h-5 text-outline" />
-      </button>
-    </div>
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
-      <div className="flex items-center gap-3 mb-4">
-        <img alt={post.author.name} src={post.author.avatar} className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
-        <p className="text-xs font-bold text-on-surface">{post.author.name}</p>
+// Một comment đơn (có thể là reply)
+const CommentItem = ({ comment, onReply }: CommentItemProps) => {
+  const api = getSocialNetworkApiV1();
+  const authorName  = comment.user?.fullName || comment.user?.username || 'Someone';
+  const authorAvatar = comment.user?.avatarUrl || `https://picsum.photos/seed/${comment.user?.id}/50/50`;
+
+  const [replies, setReplies] = useState<CommentDto[]>([]);
+  const [showReplies, setShowReplies] = useState(false);
+  const [loadingReplies, setLoadingReplies] = useState(false);
+
+  const repliesCount = Number(comment.repliesCount ?? 0);
+
+  const handleLoadReplies = async () => {
+    if (showReplies) { setShowReplies(false); return; }
+    setLoadingReplies(true);
+    try {
+      const res = await api.getApiCommentsCommentIdReplies(Number(comment.id));
+      if (res.success && res.data) {
+        setReplies((res.data as CommentDto[]) ?? []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingReplies(false);
+      setShowReplies(true);
+    }
+  };
+
+  return (
+    <div className="flex gap-3">
+      <img
+        alt={authorName}
+        src={authorAvatar}
+        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+        referrerPolicy="no-referrer"
+      />
+      <div className="flex-1">
+        <div className="bg-surface-container-low rounded-2xl p-3">
+          <h5 className="text-xs font-bold text-on-surface mb-1">{authorName}</h5>
+          <p className="text-sm text-on-surface-variant leading-snug">{comment.content}</p>
+        </div>
+        <div className="flex items-center gap-4 mt-1 ml-2">
+          <button
+            className="text-[10px] font-bold text-outline hover:text-primary transition-colors"
+            onClick={() => onReply(comment)}
+          >
+            Trả lời
+          </button>
+          <span className="text-[10px] text-outline">{timeAgo(comment.createdAt)}</span>
+          {repliesCount > 0 && (
+            <button
+              className="text-[10px] font-bold text-primary hover:underline flex items-center gap-0.5"
+              onClick={handleLoadReplies}
+            >
+              {loadingReplies ? (
+                <Loader className="w-3 h-3 animate-spin" />
+              ) : (
+                <>
+                  <CornerDownRight className="w-3 h-3" />
+                  {showReplies ? 'Ẩn' : `Xem ${repliesCount} trả lời`}
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Replies indented */}
+        {showReplies && replies.length > 0 && (
+          <div className="mt-3 ml-4 space-y-3 border-l-2 border-surface-container pl-3">
+            {replies.map(reply => {
+              const replyAuthor = reply.user?.fullName || reply.user?.username || 'Someone';
+              const replyAvatar = reply.user?.avatarUrl || `https://picsum.photos/seed/${reply.user?.id}/50/50`;
+              return (
+                <div key={String(reply.id)} className="flex gap-2">
+                  <img src={replyAvatar} alt={replyAuthor} className="w-6 h-6 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" />
+                  <div className="flex-1">
+                    <div className="bg-surface-container-low rounded-2xl p-2.5">
+                      <h5 className="text-[11px] font-bold text-on-surface mb-0.5">{replyAuthor}</h5>
+                      <p className="text-xs text-on-surface-variant leading-snug">{reply.content}</p>
+                    </div>
+                    <span className="text-[10px] text-outline ml-2">{timeAgo(reply.createdAt)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-      <p className="text-sm text-on-surface-variant mb-6 line-clamp-2">{post.content}</p>
-      
-      <div className="space-y-6">
-        <SidebarComment 
-          name="David Chen" 
-          text="The typography choice is incredible Sarah! Can't wait to see the full rollout." 
-          time="12m" 
-          avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuCL8ixvp9QIQZXVaJrguGy80dp3yTDz8YI2eQEEegSNx1QrECjb7V-FqAM4HOhKErhlq_e7P-RatDGWxFpQnba-h56tK4yazQIEwcHBFU4WMG6NcxiogzjiCb1kfczTQBNl9tc30VkKWa7KMzOppuEqHsU7NVNkr0KrxhPu_Otflw27KRZUWLw4EL-zRERJheSWsllclSaM9fuuflbtjOqEgIwTj_cxalHFJbBB0p5KwkGY7Nz1YScvTnZgkxdtlBxJYDxJCpmFEC70" 
-        />
-        <SidebarComment 
-          name="Emma Stone" 
-          text="This is exactly what we needed for the brand identity. The balance is perfect." 
-          time="45m" 
-          avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuDuwfoB0-jMMWg27dLqs3wxXPDqiCY7VWZnJ9XnByo_gSV1m05f-6EVFyRP9TpdfY68-j3fPoZJLSdsKVeCSLgadCMr5bEu2trmTt_zdlpWUulrtyacfQ0Y09-wDuv-A09T2P_eSEcLfeS7fhwjeppXZyDvW0Dkq8FBMGAMLEscFxnxPnQhWZ7A_AwZKvMWK0dgvfENzNH9ZBmfjNrSjhSH0VAICbyTQOrjE5nsS1ikS3dZXUP6PHy-55Jw_eYmtwI8xvu8kL_tueu7" 
-        />
-        <SidebarComment 
-          name="Marcus Wright" 
-          text="Great work on the balance between authority and fluidity. Very inspiring!" 
-          time="1h" 
-          avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuC52K_yr0tgNx6aDqb7poIJqEJeSkQjPWUf7Irzw18yXdUtLrTuwYaFmFYmoC0ohaPJqiwWzJS4NADZv1M_uSxBcbR7-UuAfLMsXCYsYXy1rS53hgjhKFMYI3YlHlhca0y_IxepCqUh6DijWdXZJ2c9R6Gn_rT6ng26Cnekb8PRcgyP9pOAHysq52eeUVULphEXPp0gDD8agFUpkIh98P3aP1VCwyFs_2sHrl1GcY8Pzr00GFuLoN8HS9TGQnRGyYrxlNr5_p7sB0HY" 
-        />
-      </div>
     </div>
-    <div className="p-6 bg-white/50 backdrop-blur-md border-t border-surface-container">
-      <div className="bg-surface-container-low rounded-xl p-2 flex items-center gap-2">
-        <input className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 px-2 text-on-surface placeholder:text-outline" placeholder="Write a comment..." type="text" />
-        <button className="p-2 text-primary hover:scale-110 transition-transform"><ArrowRight className="w-5 h-5" /></button>
+  );
+};
+
+interface CommentSidebarProps {
+  post: PostDto;
+  onClose: () => void;
+}
+
+const CommentSidebar = ({ post, onClose }: CommentSidebarProps) => {
+  const api = getSocialNetworkApiV1();
+  const { user: currentUser } = useAuthStore();
+
+  const [comments, setComments] = useState<CommentDto[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
+
+  const [newComment, setNewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // Reply target — khi user click "Trả lời" trên một comment
+  const [replyTarget, setReplyTarget] = useState<CommentDto | null>(null);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const postId   = Number(post.id);
+
+  // Load comments khi sidebar mở hoặc post thay đổi
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setComments([]);
+
+    const load = async () => {
+      try {
+        const res = await api.getApiCommentsPostPostId(postId, { page: 1, pageSize: 20 });
+        if (cancelled) return;
+        if (!res.success || !res.data) throw new Error(res.message ?? 'Lỗi tải bình luận');
+        setComments(res.data.items as CommentDto[] ?? []);
+      } catch (e: unknown) {
+        if (!cancelled) setError((e as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+
+    return () => { cancelled = true; };
+  }, [postId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSubmit = async () => {
+    const content = newComment.trim();
+    if (!content || submitting) return;
+
+    setSubmitting(true);
+    try {
+      const res = await api.postApiComments({
+        postId,
+        content,
+        parentId: replyTarget ? Number(replyTarget.id) : undefined,
+      });
+      if (!res.success || !res.data) throw new Error(res.message ?? 'Gửi thất bại');
+      if (replyTarget) {
+        // Tăng repliesCount trên comment cha (optimistic)
+        setComments(prev => prev.map(c =>
+          Number(c.id) === Number(replyTarget.id)
+            ? { ...c, repliesCount: (Number(c.repliesCount ?? 0) + 1) }
+            : c
+        ));
+        setReplyTarget(null);
+      } else {
+        // Prepend comment mới vào đầu danh sách
+        setComments(prev => [res.data!, ...prev]);
+      }
+      setNewComment('');
+      inputRef.current?.focus();
+    } catch (e: unknown) {
+      toast.error('Gửi bình luận thất bại, vui lòng thử lại.');
+      setError((e as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReply = (comment: CommentDto) => {
+    setReplyTarget(comment);
+    setNewComment('');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const authorAvatar = post.user?.avatarUrl || `https://picsum.photos/seed/${post.user?.id}/50/50`;
+  const authorName   = post.user?.fullName || post.user?.username || '';
+  const currentAvatar = currentUser?.avatarUrl || `https://picsum.photos/seed/${currentUser?.username}/50/50`;
+
+  return (
+    <aside className="hidden lg:flex flex-col gap-4 sticky top-24 h-[calc(100vh-120px)] overflow-hidden bg-surface-container-lowest rounded-xl surface-elevation-tonal border border-outline-variant/10">
+      {/* Header */}
+      <div className="p-6 border-b border-surface-container flex items-center justify-between">
+        <h3 className="font-headline font-bold text-on-surface">Bình luận</h3>
+        <button onClick={onClose} className="p-2 hover:bg-surface-container rounded-full transition-colors">
+          <X className="w-5 h-5 text-outline" />
+        </button>
       </div>
-    </div>
-  </aside>
-);
+
+      {/* Post snippet */}
+      <div className="px-6 pb-2 border-b border-surface-container">
+        <div className="flex items-center gap-3 mb-2">
+          <img alt={authorName} src={authorAvatar} className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
+          <p className="text-xs font-bold text-on-surface">{authorName}</p>
+        </div>
+        <p className="text-sm text-on-surface-variant line-clamp-2">{post.content}</p>
+      </div>
+
+      {/* Comments list */}
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+        {loading && (
+          <div className="flex justify-center py-8">
+            <Loader className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-center gap-2 text-error text-xs p-3 rounded-lg bg-error/10">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {!loading && !error && comments.length === 0 && (
+          <p className="text-center text-sm text-outline py-8">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
+        )}
+
+        {comments.map((comment: CommentDto) => (
+          <React.Fragment key={String(comment.id)}>
+            <CommentItem comment={comment} onReply={handleReply} />
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* Input area */}
+      <div className="p-6 bg-white/50 backdrop-blur-md border-t border-surface-container">
+        {replyTarget && (
+          <div className="flex items-center gap-2 mb-2 text-xs text-primary bg-primary/5 rounded-lg px-3 py-1.5">
+            <CornerDownRight className="w-3 h-3 shrink-0" />
+            <span>Đang trả lời <strong>{replyTarget.user?.fullName || replyTarget.user?.username}</strong></span>
+            <button onClick={() => setReplyTarget(null)} className="ml-auto text-outline hover:text-on-surface">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+        <div className="bg-surface-container-low rounded-xl p-2 flex items-center gap-2">
+          <img
+            alt="You"
+            src={currentAvatar}
+            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+            referrerPolicy="no-referrer"
+          />
+          <input
+            ref={inputRef}
+            className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 px-2 text-on-surface placeholder:text-outline"
+            placeholder={replyTarget ? `Trả lời ${replyTarget.user?.username ?? ''}...` : 'Viết bình luận...'}
+            type="text"
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={submitting}
+          />
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !newComment.trim()}
+            className="p-2 text-primary hover:scale-110 transition-transform disabled:opacity-40 disabled:hover:scale-100"
+          >
+            {submitting ? <Loader className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
+};
 
 export default CommentSidebar;

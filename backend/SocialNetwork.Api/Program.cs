@@ -1,26 +1,63 @@
 using Microsoft.EntityFrameworkCore;
-using MongoDB.Driver;
+using Scalar.AspNetCore;
 using SocialNetwork.Api.Data;
-using StackExchange.Redis;
-
+using SocialNetwork.Api.Extensions;
+using SocialNetwork.Api.Middleware;
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Đăng ký PostgreSQL (Entity Framework Core)
+// ─── Database ─────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<SocialDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 2. Đăng ký MongoDB (Dùng Singleton vì MongoClient quản lý connection pool rất tốt)
-builder.Services.AddSingleton<IMongoClient>(sp =>
-    new MongoClient(builder.Configuration.GetConnectionString("MongoConnection")));
+// ─── Authentication (JWT) ─────────────────────────────────────────────────
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
-// 3. Đăng ký Redis (Dùng Singleton để giữ một kết nối duy nhất, tái sử dụng cho Pub/Sub)
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("RedisConnection")!));
+// ─── CORS — cho phép frontend dev ─────────────────────────────────────────
+var frontendUrl = builder.Configuration["Frontend:Url"] ?? "http://localhost:3000";
+builder.Services.AddCors(options =>
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins(frontendUrl)
+              .AllowAnyHeader()
+              .AllowAnyMethod()));
 
-// ... (Các code mặc định khác của file Program.cs giữ nguyên)
+// ─── Application Services ─────────────────────────────────────────────────
+builder.Services.AddApplicationServices();
+
+// ─── Health Checks ───────────────────────────────────────────────────────
+builder.Services.AddHealthChecks();
+
+// ─── MVC + OpenAPI (Scalar UI) ───────────────────────────────────────────
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
 
+// ─── Build App ────────────────────────────────────────────────────────────
 var app = builder.Build();
-// ...
+
+// Global exception handler — phải đặt đầu tiên trong pipeline
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();                              // /openapi/v1.json
+    app.MapScalarApiReference(opts =>             // /scalar/v1
+    {
+        opts.Title = "Social Network API";
+        opts.DefaultHttpClient = new(ScalarTarget.Http, ScalarClient.Http11);
+    });
+}
+
+// Tạo wwwroot/uploads tự động nếu chưa có (cần khi chạy lần đầu trên máy mới)
+var wwwrootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+Directory.CreateDirectory(Path.Combine(wwwrootPath, "uploads"));
+
+// Static files: phục vụ ảnh upload từ wwwroot/uploads
+app.UseStaticFiles();
+
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+app.MapHealthChecks("/health");
+
+app.Run();

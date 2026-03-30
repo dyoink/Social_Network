@@ -11,7 +11,7 @@ namespace SocialNetwork.Api.DTOs.Auth
         [Required, EmailAddress, StringLength(100)]
         public string Email { get; set; } = string.Empty;
 
-        [Required, MinLength(6)]
+        [Required, MinLength(6), StringLength(128)]
         public string Password { get; set; } = string.Empty;
 
         [StringLength(100)]

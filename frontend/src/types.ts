@@ -1,4 +1,4 @@
-export type View = 'newsfeed' | 'profile' | 'messenger' | 'search' | 'notifications';
+export type View = 'newsfeed' | 'profile' | 'messenger' | 'search' | 'notifications' | 'admin';
 
 export interface Post {
   id: string;

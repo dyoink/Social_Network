@@ -1,20 +1,252 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Social Network
 
-# Run and deploy your AI Studio app
+Ứng dụng mạng xã hội full-stack, được xây dựng để học và thực hành các công nghệ hiện đại.
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/3ca7e6a6-a8e0-43ee-b08d-7f6ee42f1b22
+## Tech Stack
 
-## Run Locally
+| Layer | Công nghệ |
+|---|---|
+| **Backend** | ASP.NET Core (.NET 10), Entity Framework Core, PostgreSQL |
+| **Frontend** | React 19, TypeScript, Vite 6, TailwindCSS v4, Zustand, Motion |
+| **Auth** | JWT Bearer Token (7 ngày) |
+| **API Docs** | Scalar UI (auto-gen OpenAPI) |
+| **Infrastructure** | Docker (PostgreSQL container) |
 
-**Prerequisites:**  Node.js
+---
 
+## Chức năng chính
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- **Authentication** — Đăng ký, đăng nhập với JWT
+- **Newsfeed** — Xem bài viết của người đang follow, infinite scroll, skeleton loading
+- **Posts** — Tạo, chỉnh sửa, xóa bài viết, đính kèm ảnh (upload)
+- **Reactions** — Like / unlike bài viết
+- **Comments** — Bình luận và reply nested comments
+- **Profile** — Xem và chỉnh sửa trang cá nhân, avatar, ảnh bìa
+- **Follow System** — Follow / Unfollow người dùng, gợi ý follow
+- **Search** — Tìm kiếm người dùng và bài viết
+- **Messenger** — Nhắn tin riêng tư real-time
+- **Notifications** — Thông báo khi có like, comment, follow
+- **Admin Panel** — Quản lý users, posts, reports (dành cho role Admin)
+- **Report System** — Báo cáo người dùng / bài viết vi phạm
+- **Health Check** — Endpoint `/health` để monitor
+
+Xem chi tiết trạng thái tại [FEATURES.md](FEATURES.md).
+
+---
+
+## Yêu cầu hệ thống
+
+| Phần mềm | Phiên bản tối thiểu |
+|---|---|
+| [.NET SDK](https://dotnet.microsoft.com/download) | 10.0 |
+| [Node.js](https://nodejs.org/) | 18+ |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Bất kỳ (để chạy PostgreSQL) |
+
+---
+
+## Hướng dẫn cài đặt chi tiết
+
+### Bước 1 — Khởi động Database (PostgreSQL qua Docker)
+
+```bash
+cd docker
+docker compose up -d
+```
+
+Container sẽ tạo database `SocialNetworkDb` với user `admin` trên port `5432`.
+
+Kiểm tra container đã chạy:
+```bash
+docker ps
+# Phải thấy container "social_postgres" ở trạng thái healthy
+```
+
+### Bước 2 — Cài đặt & chạy Backend
+
+```bash
+cd backend/SocialNetwork.Api
+```
+
+**Cấu hình secrets (chạy 1 lần):**
+
+```bash
+# Connection string cho PostgreSQL
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=SocialNetworkDb;Username=admin;Password=SecretPassword123!"
+
+# Secret key cho JWT (phải >= 32 ký tự)
+dotnet user-secrets set "Jwt:SecretKey" "SuperSecretKeyAtLeast32Characters!!"
+```
+
+**Chạy database migration:**
+
+```bash
+dotnet ef database update
+```
+
+> Nếu chưa cài `dotnet-ef`:
+> ```bash
+> dotnet tool install --global dotnet-ef
+> ```
+
+**Khởi động server:**
+
+```bash
+dotnet run
+```
+
+Backend chạy tại: **http://localhost:5204**
+
+### Bước 3 — Cài đặt & chạy Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend chạy tại: **http://localhost:3000**
+
+> Frontend tự động gọi API backend tại `http://localhost:5204`. Nếu backend chạy port khác, sửa file `frontend/src/api/axios.ts`.
+
+### Bước 4 — Truy cập ứng dụng
+
+1. Mở trình duyệt tại **http://localhost:3000**
+2. **Đăng ký** tài khoản mới
+3. Đăng nhập và bắt đầu sử dụng
+
+---
+
+## Truy cập Admin Panel
+
+1. Trong database, cập nhật role của user thành `Admin`:
+
+```sql
+UPDATE users SET role = 'Admin' WHERE username = 'your_username';
+```
+
+Hoặc dùng API admin (nếu đã là Admin):
+- `PUT /api/admin/users/{id}/role` với body `{ "role": "Admin" }`
+
+2. Đăng nhập lại, click vào icon **Shield** (🛡️) trên thanh navigation trên cùng.
+
+3. Admin Panel bao gồm 4 tab:
+   - **Dashboard** — Thống kê tổng quan (users, posts, comments, reports)
+   - **Users** — Quản lý tài khoản (ban/unban, đổi role, xóa)
+   - **Posts** — Quản lý bài viết (xem, xóa)
+   - **Reports** — Xử lý báo cáo vi phạm
+
+---
+
+## API Documentation
+
+Sau khi chạy backend (development mode), mở:
+
+```
+http://localhost:5204/scalar/v1
+```
+
+Scalar UI cho phép xem toàn bộ endpoints, thử gọi API trực tiếp, và xem schema.
+
+OpenAPI JSON spec: `http://localhost:5204/openapi/v1.json`
+
+---
+
+## Cấu trúc dự án
+
+```
+Social_Network/
+├── backend/SocialNetwork.Api/     ← ASP.NET Core Web API
+│   ├── Controllers/               ← HTTP endpoints (không có business logic)
+│   ├── Services/
+│   │   ├── Interfaces/            ← Service contracts
+│   │   └── Implementations/       ← Business logic
+│   ├── Entities/                  ← EF Core models (map DB tables)
+│   ├── DTOs/                      ← Request/Response objects
+│   │   ├── Auth/                  ← Login, Register DTOs
+│   │   ├── Post/                  ← Post DTOs
+│   │   ├── Comment/               ← Comment DTOs
+│   │   ├── User/                  ← User DTOs
+│   │   ├── Message/               ← Message DTOs
+│   │   ├── Notification/          ← Notification DTOs
+│   │   └── Admin/                 ← Admin panel DTOs
+│   ├── Data/                      ← SocialDbContext
+│   ├── Migrations/                ← EF Core migrations (auto-generated)
+│   ├── Middleware/                 ← Global exception handler
+│   ├── Helpers/                   ← JWT token generation
+│   ├── Extensions/                ← DI registration
+│   └── Common/                    ← ApiResponse wrapper, PagedResult
+│
+├── frontend/src/                  ← React SPA
+│   ├── api/                       ← Generated API client (Orval) + Axios instance
+│   ├── store/                     ← Zustand stores (auth, feed)
+│   ├── hooks/                     ← Custom React hooks (useFeed)
+│   ├── components/
+│   │   ├── feed/                  ← PostCard, CreatePostModal, CommentSidebar
+│   │   ├── layout/                ← Sidebar, TopNav, RightSidebar
+│   │   ├── ui/                    ← Reusable UI (ImageUpload, Skeleton, etc.)
+│   │   ├── views/                 ← Page components (Newsfeed, Profile, etc.)
+│   │   └── admin/                 ← Admin layout + admin views
+│   ├── types/                     ← TypeScript type definitions
+│   └── utils/                     ← Utility functions
+│
+├── database/                      ← SQL schema + documentation
+│   ├── database.sql               ← Full CREATE TABLE statements
+│   └── DATABASE_SUMMARY.txt       ← Tóm tắt schema
+│
+├── docker/
+│   └── docker-compose.yml         ← PostgreSQL container
+│
+├── FEATURES.md                    ← Danh sách chức năng + trạng thái
+├── BACKEND_PLAN.md                ← Kế hoạch backend
+├── FRONTEND_PLAN.md               ← Kế hoạch frontend
+├── PLAN.md                        ← Kế hoạch tổng thể
+└── Social_Network.sln             ← .NET Solution file
+```
+
+---
+
+## Database Schema
+
+10 bảng PostgreSQL:
+
+| Bảng | Mô tả |
+|---|---|
+| `users` | Thông tin người dùng, role, trạng thái active |
+| `posts` | Bài viết (content, image) |
+| `comments` | Bình luận + reply (self-referencing `parent_id`) |
+| `post_likes` | Like bài viết (1 user = 1 like) |
+| `follows` | Quan hệ follow (follower → following) |
+| `conversations` | Cuộc hội thoại |
+| `conversation_participants` | Thành viên hội thoại |
+| `messages` | Tin nhắn trong conversation |
+| `notifications` | Thông báo (like, comment, follow, reply) |
+| `reports` | Báo cáo vi phạm |
+
+Xem schema SQL đầy đủ tại [database/database.sql](database/database.sql).
+
+---
+
+## Design Patterns
+
+- **Service Pattern** — Controller chỉ gọi Service Interface, không chứa business logic
+- **DTO Pattern** — Tách biệt API contract (DTOs) khỏi database models (Entities)
+- **Middleware Pipeline** — Global exception handling với status code phù hợp (400/401/403/404/500)
+- **Zustand Store** — State management đơn giản, immutable updates
+- **Auto-generated API Client** — OpenAPI → Orval → TypeScript client, đảm bảo type-safe
+
+---
+
+## Mở rộng
+
+| Muốn thêm | Cách làm |
+|---|---|
+| Real-time chat | Thêm SignalR `ChatHub`, không đụng REST API hiện có |
+| Cloud storage | Tạo `IFileUploadService` implementation mới (Cloudinary, S3) |
+| Email xác thực | Tạo `IEmailService` + inject vào AuthService |
+| Cache | Inject `IMemoryCache` vào Service cần cache |
+
+---
+
+*Dự án cá nhân — đang trong quá trình phát triển.*

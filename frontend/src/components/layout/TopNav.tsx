@@ -1,6 +1,7 @@
-import { Search, MessageSquare, Bell, LogOut } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Bell, LogOut, MessageSquare } from 'lucide-react';
 import { View, UserProfile } from '../../types';
-import { MOCK_USER } from '../../data/mockData';
+import { getSocialNetworkApiV1 } from '../../api/api-generated';
 
 interface TopNavProps {
   currentView: View;
@@ -10,48 +11,83 @@ interface TopNavProps {
   user?: UserProfile | null;
 }
 
-const TopNav = ({ currentView, setView, onProfileClick, onLogout, user }: TopNavProps) => (
-  <header className="fixed top-0 w-full z-50 glass-nav px-6 h-16 flex justify-between items-center">
-    <div className="flex items-center gap-8">
-      <span className="font-elephant text-2xl font-bold text-primary cursor-pointer" onClick={() => setView('newsfeed')}>Social</span>
-    </div>
-    <nav className="flex items-center gap-6">
-      <div className="hidden lg:flex items-center gap-6">
-        <button 
-          onClick={() => setView('newsfeed')}
-          className={`font-headline font-semibold px-1 py-4 transition-colors ${currentView === 'newsfeed' ? 'text-primary border-b-2 border-primary' : 'text-outline hover:text-primary'}`}
-        >
-          Home
-        </button>
-        <button 
-          onClick={() => setView('messenger')}
-          className={`font-headline font-semibold px-1 py-4 transition-colors ${currentView === 'messenger' ? 'text-primary border-b-2 border-primary' : 'text-outline hover:text-primary'}`}
-        >
-          Messenger
-        </button>
-        <button 
-          onClick={() => setView('notifications')}
-          className={`font-headline font-semibold px-1 py-4 transition-colors ${currentView === 'notifications' ? 'text-primary border-b-2 border-primary' : 'text-outline hover:text-primary'}`}
-        >
-          Notifications
-        </button>
+const TopNav = ({ currentView, setView, onProfileClick, onLogout, user }: TopNavProps) => {
+  const avatar = user?.avatar || `https://picsum.photos/seed/${user?.id || 'me'}/100/100`;
+  const [notifCount, setNotifCount] = useState(0);
+  const [msgCount,   setMsgCount]   = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    const api = getSocialNetworkApiV1();
+    const fetchCounts = () => {
+      api.getApiNotificationsUnreadCount().then(r => { if (r.success && r.data) setNotifCount(Number(r.data.count ?? 0)); }).catch(console.error);
+      api.getApiConversationsUnreadCount().then(r => { if (r.success && r.data) setMsgCount(Number(r.data.count ?? 0)); }).catch(console.error);
+    };
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30_000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  return (
+    <header className="fixed top-0 w-full z-50 glass-nav px-6 h-16 flex justify-between items-center">
+      <div className="flex items-center gap-8">
+        <span className="font-elephant text-2xl font-bold text-primary cursor-pointer" onClick={() => setView('newsfeed')}>Social</span>
       </div>
-      <div className="flex items-center gap-4 border-l border-outline-variant/30 pl-6 ml-2">
-        <button className="p-2 text-outline hover:bg-surface-container rounded-full transition-colors" onClick={() => setView('messenger')}>
-          <MessageSquare className="w-5 h-5" />
-        </button>
-        <button className="p-2 text-outline hover:bg-surface-container rounded-full transition-colors" onClick={() => setView('notifications')}>
-          <Bell className="w-5 h-5" />
-        </button>
-        <button className="p-2 text-outline hover:bg-surface-container rounded-full transition-colors" onClick={onLogout} title="Logout">
-          <LogOut className="w-5 h-5" />
-        </button>
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest flex-shrink-0 cursor-pointer border-2 border-primary/10" onClick={onProfileClick}>
-          <img alt="User Profile" src={user?.avatar || MOCK_USER.avatar} referrerPolicy="no-referrer" />
+      <nav className="flex items-center gap-6">
+        <div className="hidden lg:flex items-center gap-6">
+          <button 
+            onClick={() => setView('newsfeed')}
+            className={`font-headline font-semibold px-1 py-4 transition-colors ${currentView === 'newsfeed' ? 'text-primary border-b-2 border-primary' : 'text-outline hover:text-primary'}`}
+          >
+            Trang chủ
+          </button>
+          <button 
+            onClick={() => setView('messenger')}
+            className={`font-headline font-semibold px-1 py-4 transition-colors ${currentView === 'messenger' ? 'text-primary border-b-2 border-primary' : 'text-outline hover:text-primary'}`}
+          >
+            Tin nhắn
+          </button>
+          <button 
+            onClick={() => setView('notifications')}
+            className={`font-headline font-semibold px-1 py-4 transition-colors ${currentView === 'notifications' ? 'text-primary border-b-2 border-primary' : 'text-outline hover:text-primary'}`}
+          >
+            Thông báo
+          </button>
         </div>
-      </div>
-    </nav>
-  </header>
-);
+
+        <div className="flex items-center gap-4 border-l border-outline-variant/30 pl-6 ml-2">
+          <button className="p-2 text-outline hover:bg-surface-container rounded-full transition-colors" onClick={() => setView('search')}>
+            <Search className="w-5 h-5" />
+          </button>
+          <button className="relative p-2 text-outline hover:bg-surface-container rounded-full transition-colors" onClick={() => { setView('messenger'); setMsgCount(0); }}>
+            <MessageSquare className="w-5 h-5" />
+            {msgCount > 0 && (
+              <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-error text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                {msgCount > 99 ? '99+' : msgCount}
+              </span>
+            )}
+          </button>
+          <button className="relative p-2 text-outline hover:bg-surface-container rounded-full transition-colors" onClick={() => { setView('notifications'); setNotifCount(0); }}>
+            <Bell className="w-5 h-5" />
+            {notifCount > 0 && (
+              <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-error text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                {notifCount > 99 ? '99+' : notifCount}
+              </span>
+            )}
+          </button>
+          <button className="p-2 text-outline hover:bg-surface-container rounded-full transition-colors" onClick={onLogout} title="Đăng xuất">
+            <LogOut className="w-5 h-5" />
+          </button>
+          <div
+            className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest flex-shrink-0 cursor-pointer border-2 border-primary/10"
+            onClick={onProfileClick}
+          >
+            <img alt="User Profile" src={avatar} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          </div>
+        </div>
+      </nav>
+    </header>
+  );
+};
 
 export default TopNav;

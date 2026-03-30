@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using SocialNetwork.Api.DTOs.User;
 
 namespace SocialNetwork.Api.DTOs.Message
@@ -17,7 +18,15 @@ namespace SocialNetwork.Api.DTOs.Message
     public class CreateMessageDto
     {
         public int ConversationId { get; set; }
+        [Required, StringLength(2000, MinimumLength = 1)]
         public string Content { get; set; } = string.Empty;
+    }
+
+    /// <summary>Bắt đầu / lấy conversation với một user khác.</summary>
+    public class StartConversationDto
+    {
+        [Required]
+        public int TargetUserId { get; set; }
     }
 
     public class ConversationDto
@@ -28,4 +37,10 @@ namespace SocialNetwork.Api.DTOs.Message
         public MessageDto? LastMessage { get; set; }
         public int UnreadCount { get; set; }
     }
+
+    public class UnreadCountDto
+    {
+        public int Count { get; set; }
+    }
 }
+

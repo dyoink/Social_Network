@@ -12,4 +12,10 @@ namespace SocialNetwork.Api.DTOs.Notification
         public bool IsRead { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+
+    public class UnreadNotificationCountDto
+    {
+        public int Count { get; set; }
+    }
 }
+

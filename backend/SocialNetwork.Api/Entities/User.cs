@@ -20,8 +20,7 @@ namespace SocialNetwork.Api.Entities
 
         [StringLength(100)]
         public string? FullName { get; set; }
-        [Required, DataType(DataType.Date)]
-
+        [DataType(DataType.Date)]
         public DateTime? DateOfBirth { get; set; }
 
         public string? AvatarUrl { get; set; }
@@ -30,6 +29,9 @@ namespace SocialNetwork.Api.Entities
 
         [StringLength(50)]
         public string Role { get; set; } = "Member";
+
+        /// <summary>false = bị ban, không thể đăng nhập hoặc thực hiện thao tác</summary>
+        public bool IsActive { get; set; } = true;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
