@@ -5,6 +5,25 @@
  * OpenAPI spec version: 1.0.0
  */
 import { customMutator } from './mutator';
+export interface AdminCommentDto {
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  id?: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  postId?: number | string;
+  authorUsername?: string;
+  /** @nullable */
+  authorAvatarUrl?: string | null;
+  content?: string;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  parentId?: number | string | null;
+  /** @nullable */
+  postContentPreview?: string | null;
+  createdAt?: string;
+}
+
 export interface AdminPostDto {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   id?: number | string;
@@ -23,6 +42,14 @@ export interface AdminPostDto {
   createdAt?: string;
 }
 
+export interface AdminResetPasswordDto {
+  /**
+     * @minLength 6
+     * @maxLength 100
+     */
+  newPassword: string;
+}
+
 export interface AdminStatsDto {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   totalUsers?: number | string;
@@ -31,11 +58,19 @@ export interface AdminStatsDto {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   totalComments?: number | string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  totalMessages?: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  totalFollows?: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
   pendingReports?: number | string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   newUsersToday?: number | string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   newPostsToday?: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  newCommentsToday?: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  activeUsersWeek?: number | string;
 }
 
 export interface AdminUserDto {
@@ -53,6 +88,10 @@ export interface AdminUserDto {
   postCount?: number | string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   followerCount?: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  followingCount?: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  commentCount?: number | string;
   createdAt?: string;
 }
 
@@ -184,6 +223,25 @@ export interface ApiResponseOfFollowResultDto {
   data?: null | FollowResultDto;
 }
 
+export interface DailyCountDto {
+  date?: string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  count?: number | string;
+}
+
+export interface GrowthChartDto {
+  users?: DailyCountDto[];
+  posts?: DailyCountDto[];
+  comments?: DailyCountDto[];
+}
+
+export interface ApiResponseOfGrowthChartDto {
+  success?: boolean;
+  /** @nullable */
+  message?: string | null;
+  data?: null | GrowthChartDto;
+}
+
 export interface LikeResultDto {
   isLiked?: boolean;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
@@ -218,6 +276,24 @@ export interface ApiResponseOfMessageDto {
   /** @nullable */
   message?: string | null;
   data?: null | MessageDto;
+}
+
+export interface PagedResultOfAdminCommentDto {
+  items?: AdminCommentDto[];
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  totalCount?: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  page?: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  pageSize?: number | string;
+  hasNextPage?: boolean;
+}
+
+export interface ApiResponseOfPagedResultOfAdminCommentDto {
+  success?: boolean;
+  /** @nullable */
+  message?: string | null;
+  data?: null | PagedResultOfAdminCommentDto;
 }
 
 export interface PagedResultOfAdminPostDto {
@@ -483,6 +559,12 @@ export interface ApiResponseOfUserDto {
   data?: null | UserDto;
 }
 
+export interface ChangePasswordDto {
+  currentPassword: string;
+  /** @minLength 6 */
+  newPassword: string;
+}
+
 export interface ChangeRoleDto {
   /**
      * @minLength 0
@@ -564,7 +646,10 @@ export interface RegisterDto {
      * @maxLength 100
      */
   email: string;
-  /** @minLength 6 */
+  /**
+     * @minLength 0
+     * @maxLength 128
+     */
   password: string;
   /**
      * @minLength 0
@@ -604,9 +689,17 @@ export interface UpdateUserDto {
   dateOfBirth?: string | null;
 }
 
+export type GetApiAdminGrowthChartParams = {
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+days?: number | string;
+};
+
 export type GetApiAdminUsersParams = {
 q?: string;
 role?: string;
+status?: string;
 /**
  * @pattern ^-?(?:0|[1-9]\d*)$
  */
@@ -623,6 +716,22 @@ ban?: boolean;
 
 export type GetApiAdminPostsParams = {
 q?: string;
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+page?: number | string;
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+pageSize?: number | string;
+};
+
+export type GetApiAdminCommentsParams = {
+q?: string;
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+postId?: number | string;
 /**
  * @pattern ^-?(?:0|[1-9]\d*)$
  */
@@ -711,6 +820,18 @@ page?: number | string;
 pageSize?: number | string;
 };
 
+export type GetApiPostsSearchParams = {
+q?: string;
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+page?: number | string;
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+pageSize?: number | string;
+};
+
 export type PostApiUploadImageBody = {
   file?: IFormFile;
 };
@@ -751,6 +872,16 @@ const getApiAdminStats = (
       );
     }
 
+const getApiAdminGrowthChart = (
+    params?: GetApiAdminGrowthChartParams,
+ ) => {
+      return customMutator<ApiResponseOfGrowthChartDto>(
+      {url: `/api/Admin/growth-chart`, method: 'GET',
+        params
+    },
+      );
+    }
+
 const getApiAdminUsers = (
     params?: GetApiAdminUsersParams,
  ) => {
@@ -784,6 +915,18 @@ const putApiAdminUsersIdRole = (
       );
     }
 
+const putApiAdminUsersIdResetPassword = (
+    id: number | string,
+    adminResetPasswordDto: AdminResetPasswordDto,
+ ) => {
+      return customMutator<ApiResponse>(
+      {url: `/api/Admin/users/${id}/reset-password`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: adminResetPasswordDto
+    },
+      );
+    }
+
 const deleteApiAdminUsersId = (
     id: number | string,
  ) => {
@@ -812,6 +955,25 @@ const deleteApiAdminPostsId = (
       );
     }
 
+const getApiAdminComments = (
+    params?: GetApiAdminCommentsParams,
+ ) => {
+      return customMutator<ApiResponseOfPagedResultOfAdminCommentDto>(
+      {url: `/api/Admin/comments`, method: 'GET',
+        params
+    },
+      );
+    }
+
+const deleteApiAdminCommentsId = (
+    id: number | string,
+ ) => {
+      return customMutator<ApiResponse>(
+      {url: `/api/Admin/comments/${id}`, method: 'DELETE'
+    },
+      );
+    }
+
 const getApiAdminReports = (
     params?: GetApiAdminReportsParams,
  ) => {
@@ -827,6 +989,15 @@ const putApiAdminReportsIdResolve = (
  ) => {
       return customMutator<ApiResponse>(
       {url: `/api/Admin/reports/${id}/resolve`, method: 'PUT'
+    },
+      );
+    }
+
+const deleteApiAdminReportsId = (
+    id: number | string,
+ ) => {
+      return customMutator<ApiResponse>(
+      {url: `/api/Admin/reports/${id}`, method: 'DELETE'
     },
       );
     }
@@ -1072,6 +1243,16 @@ const postApiPostsIdLike = (
       );
     }
 
+const getApiPostsSearch = (
+    params?: GetApiPostsSearchParams,
+ ) => {
+      return customMutator<ApiResponseOfPagedResultOfPostDto>(
+      {url: `/api/Posts/search`, method: 'GET',
+        params
+    },
+      );
+    }
+
 const postApiReports = (
     createReportDto: CreateReportDto,
  ) => {
@@ -1167,16 +1348,32 @@ const getApiUsersSuggestions = (
       );
     }
 
-return {getApiAdminStats,getApiAdminUsers,putApiAdminUsersIdBan,putApiAdminUsersIdRole,deleteApiAdminUsersId,getApiAdminPosts,deleteApiAdminPostsId,getApiAdminReports,putApiAdminReportsIdResolve,postApiAuthRegister,postApiAuthLogin,getApiAuthMe,getApiCommentsPostPostId,getApiCommentsCommentIdReplies,postApiComments,deleteApiCommentsId,getApiConversations,postApiConversations,getApiConversationsIdMessages,postApiConversationsIdMessages,putApiConversationsIdRead,getApiConversationsUnreadCount,getApiNotifications,putApiNotificationsIdRead,putApiNotificationsReadAll,getApiNotificationsUnreadCount,getApiPostsFeed,getApiPostsUserUserId,getApiPostsId,putApiPostsId,deleteApiPostsId,postApiPosts,postApiPostsIdLike,postApiReports,postApiUploadImage,getApiUsersUsername,putApiUsersMe,postApiUsersIdFollow,getApiUsersIdFollowers,getApiUsersIdFollowing,getApiUsersSearch,getApiUsersSuggestions}};
+const putApiUsersMePassword = (
+    changePasswordDto: ChangePasswordDto,
+ ) => {
+      return customMutator<void>(
+      {url: `/api/Users/me/password`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: changePasswordDto
+    },
+      );
+    }
+
+return {getApiAdminStats,getApiAdminGrowthChart,getApiAdminUsers,putApiAdminUsersIdBan,putApiAdminUsersIdRole,putApiAdminUsersIdResetPassword,deleteApiAdminUsersId,getApiAdminPosts,deleteApiAdminPostsId,getApiAdminComments,deleteApiAdminCommentsId,getApiAdminReports,putApiAdminReportsIdResolve,deleteApiAdminReportsId,postApiAuthRegister,postApiAuthLogin,getApiAuthMe,getApiCommentsPostPostId,getApiCommentsCommentIdReplies,postApiComments,deleteApiCommentsId,getApiConversations,postApiConversations,getApiConversationsIdMessages,postApiConversationsIdMessages,putApiConversationsIdRead,getApiConversationsUnreadCount,getApiNotifications,putApiNotificationsIdRead,putApiNotificationsReadAll,getApiNotificationsUnreadCount,getApiPostsFeed,getApiPostsUserUserId,getApiPostsId,putApiPostsId,deleteApiPostsId,postApiPosts,postApiPostsIdLike,getApiPostsSearch,postApiReports,postApiUploadImage,getApiUsersUsername,putApiUsersMe,postApiUsersIdFollow,getApiUsersIdFollowers,getApiUsersIdFollowing,getApiUsersSearch,getApiUsersSuggestions,putApiUsersMePassword}};
 export type GetApiAdminStatsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAdminStats']>>>
+export type GetApiAdminGrowthChartResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAdminGrowthChart']>>>
 export type GetApiAdminUsersResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAdminUsers']>>>
 export type PutApiAdminUsersIdBanResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['putApiAdminUsersIdBan']>>>
 export type PutApiAdminUsersIdRoleResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['putApiAdminUsersIdRole']>>>
+export type PutApiAdminUsersIdResetPasswordResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['putApiAdminUsersIdResetPassword']>>>
 export type DeleteApiAdminUsersIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['deleteApiAdminUsersId']>>>
 export type GetApiAdminPostsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAdminPosts']>>>
 export type DeleteApiAdminPostsIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['deleteApiAdminPostsId']>>>
+export type GetApiAdminCommentsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAdminComments']>>>
+export type DeleteApiAdminCommentsIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['deleteApiAdminCommentsId']>>>
 export type GetApiAdminReportsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAdminReports']>>>
 export type PutApiAdminReportsIdResolveResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['putApiAdminReportsIdResolve']>>>
+export type DeleteApiAdminReportsIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['deleteApiAdminReportsId']>>>
 export type PostApiAuthRegisterResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiAuthRegister']>>>
 export type PostApiAuthLoginResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiAuthLogin']>>>
 export type GetApiAuthMeResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAuthMe']>>>
@@ -1201,6 +1398,7 @@ export type PutApiPostsIdResult = NonNullable<Awaited<ReturnType<ReturnType<type
 export type DeleteApiPostsIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['deleteApiPostsId']>>>
 export type PostApiPostsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiPosts']>>>
 export type PostApiPostsIdLikeResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiPostsIdLike']>>>
+export type GetApiPostsSearchResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiPostsSearch']>>>
 export type PostApiReportsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiReports']>>>
 export type PostApiUploadImageResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiUploadImage']>>>
 export type GetApiUsersUsernameResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiUsersUsername']>>>
@@ -1210,3 +1408,4 @@ export type GetApiUsersIdFollowersResult = NonNullable<Awaited<ReturnType<Return
 export type GetApiUsersIdFollowingResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiUsersIdFollowing']>>>
 export type GetApiUsersSearchResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiUsersSearch']>>>
 export type GetApiUsersSuggestionsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiUsersSuggestions']>>>
+export type PutApiUsersMePasswordResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['putApiUsersMePassword']>>>

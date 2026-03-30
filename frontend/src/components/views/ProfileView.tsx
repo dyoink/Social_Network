@@ -10,6 +10,8 @@ import { formatCount } from '../../utils/time';
 interface ProfileViewProps {
   user?: UserProfile;
   onCommentClick?: (post: PostDto) => void;
+  /** Chuyển sang Messenger và mở conversation với user này */
+  onMessageClick?: (userId: number) => void;
 }
 
 const Stat = ({ value, label, border }: { value: string; label: string; border?: boolean }) => (
@@ -26,7 +28,7 @@ const IntroItem = ({ icon, text, isLink }: { icon: ReactNode; text: string; isLi
   </div>
 );
 
-const ProfileView = ({ user, onCommentClick }: ProfileViewProps) => {
+const ProfileView = ({ user, onCommentClick, onMessageClick }: ProfileViewProps) => {
   const api = getSocialNetworkApiV1();
   const { user: currentUser, updateUser } = useAuthStore();
 
@@ -219,8 +221,11 @@ const ProfileView = ({ user, onCommentClick }: ProfileViewProps) => {
                       <><UserPlus className="w-4 h-4" /> Theo dõi</>
                     )}
                   </button>
-                  <button className="p-3 bg-surface-container-high text-on-surface rounded-xl hover:bg-surface-container-highest transition-colors">
-                    <MessageSquare className="w-5 h-5" />
+                  <button
+                    onClick={() => userId && onMessageClick?.(userId)}
+                    className="px-6 py-3 bg-surface-container-high text-on-surface rounded-xl hover:bg-surface-container-highest transition-colors font-headline font-bold text-sm flex items-center gap-2"
+                  >
+                    <MessageSquare className="w-4 h-4" /> Nhắn tin
                   </button>
                 </>
               )}
@@ -308,7 +313,7 @@ const ProfileView = ({ user, onCommentClick }: ProfileViewProps) => {
       {/* Profile edit modal */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-surface-container">
               <h2 className="font-headline font-bold text-lg text-on-surface">Chỉnh sửa profile</h2>
               <button onClick={() => setShowEditModal(false)} className="p-2 rounded-full hover:bg-surface-container transition-colors">

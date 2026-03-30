@@ -21,6 +21,14 @@ public class AdminController(IAdminService adminService) : ControllerBase
         return Ok(ApiResponse<AdminStatsDto>.Ok(stats));
     }
 
+    [HttpGet("growth-chart")]
+    [ProducesResponseType<ApiResponse<GrowthChartDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetGrowthChart([FromQuery] int days = 30)
+    {
+        var chart = await adminService.GetGrowthChartAsync(days);
+        return Ok(ApiResponse<GrowthChartDto>.Ok(chart));
+    }
+
     // ─── Users ────────────────────────────────────────────────────────────────
 
     [HttpGet("users")]
@@ -28,10 +36,11 @@ public class AdminController(IAdminService adminService) : ControllerBase
     public async Task<IActionResult> GetUsers(
         [FromQuery] string? q,
         [FromQuery] string? role,
+        [FromQuery] string? status,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var result = await adminService.GetUsersAsync(q, role, page, pageSize);
+        var result = await adminService.GetUsersAsync(q, role, status, page, pageSize);
         return Ok(ApiResponse<PagedResult<AdminUserDto>>.Ok(result));
     }
 
@@ -58,6 +67,23 @@ public class AdminController(IAdminService adminService) : ControllerBase
         catch (InvalidOperationException ex)
         {
             return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+    }
+
+    [HttpPut("users/{id}/reset-password")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ResetPassword(int id, [FromBody] AdminResetPasswordDto dto)
+    {
+        if (!ModelState.IsValid) return BadRequest(ApiResponse.Fail("Dữ liệu không hợp lệ."));
+        try
+        {
+            await adminService.ResetPasswordAsync(id, dto.NewPassword);
+            return Ok(ApiResponse.Ok("Mật khẩu đã được đặt lại."));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(ApiResponse.Fail("Không tìm thấy user."));
         }
     }
 
@@ -106,6 +132,36 @@ public class AdminController(IAdminService adminService) : ControllerBase
         }
     }
 
+    // ─── Comments ──────────────────────────────────────────────────────────────
+
+    [HttpGet("comments")]
+    [ProducesResponseType<ApiResponse<PagedResult<AdminCommentDto>>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetComments(
+        [FromQuery] string? q,
+        [FromQuery] int? postId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var result = await adminService.GetCommentsAsync(q, postId, page, pageSize);
+        return Ok(ApiResponse<PagedResult<AdminCommentDto>>.Ok(result));
+    }
+
+    [HttpDelete("comments/{id}")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteComment(int id)
+    {
+        try
+        {
+            await adminService.DeleteCommentAsync(id);
+            return Ok(ApiResponse.Ok("Bình luận đã bị xóa."));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(ApiResponse.Fail("Không tìm thấy bình luận."));
+        }
+    }
+
     // ─── Reports ──────────────────────────────────────────────────────────────
 
     [HttpGet("reports")]
@@ -125,5 +181,21 @@ public class AdminController(IAdminService adminService) : ControllerBase
     {
         await adminService.ResolveReportAsync(id);
         return Ok(ApiResponse.Ok("Báo cáo đã được xử lý."));
+    }
+
+    [HttpDelete("reports/{id}")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteReport(int id)
+    {
+        try
+        {
+            await adminService.DeleteReportAsync(id);
+            return Ok(ApiResponse.Ok("Báo cáo đã bị xóa."));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(ApiResponse.Fail("Không tìm thấy báo cáo."));
+        }
     }
 }

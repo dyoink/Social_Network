@@ -37,6 +37,7 @@ import AdminDashboardView from './components/views/admin/AdminDashboardView';
 import AdminUsersView from './components/views/admin/AdminUsersView';
 import AdminPostsView from './components/views/admin/AdminPostsView';
 import AdminReportsView from './components/views/admin/AdminReportsView';
+import AdminCommentsView from './components/views/admin/AdminCommentsView';
 
 /**
  * Chuyển đổi UserDto (backend) sang UserProfile (kiểu cũ dùng trong mock views).
@@ -66,6 +67,8 @@ export default function App() {
   const [activeCommentPost, setActiveCommentPost] = useState<PostDto | null>(null);
   // Tăng key để NewsfeedView tự refresh sau khi đăng bài mới
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
+  // Target user ID để mở conversation trong Messenger (từ Profile "Nhắn tin")
+  const [messengerTargetUserId, setMessengerTargetUserId] = useState<number | null>(null);
 
   // Profile đang xem — mặc định là profile của chính mình
   const currentUserProfile = user ? mapToUserProfile(user) : null;
@@ -86,10 +89,17 @@ export default function App() {
     setView('profile');
   };
 
+  const handleMessageUser = (targetUserId: number) => {
+    setMessengerTargetUserId(targetUserId);
+    setView('messenger');
+  };
+
   // Scroll to top on view change
   useEffect(() => {
     window.scrollTo(0, 0);
     setActiveCommentPost(null);
+    // Reset messenger target khi rời khỏi Messenger
+    if (currentView !== 'messenger') setMessengerTargetUserId(null);
   }, [currentView, selectedUser]);
 
   return (
@@ -110,6 +120,7 @@ export default function App() {
           {adminTab === 'dashboard' && <AdminDashboardView />}
           {adminTab === 'users'     && <AdminUsersView />}
           {adminTab === 'posts'     && <AdminPostsView />}
+          {adminTab === 'comments'  && <AdminCommentsView />}
           {adminTab === 'reports'   && <AdminReportsView />}
         </AdminLayout>
       ) : (
@@ -131,7 +142,7 @@ export default function App() {
               user={currentUserProfile}
             />
             
-            <section className={`${currentView === 'profile' ? 'lg:col-span-2' : 'min-w-0'}`}>
+            <section className={`${currentView === 'profile' && !activeCommentPost ? 'lg:col-span-2' : 'min-w-0'}`}>
               <ErrorBoundary>
                 <AnimatePresence mode="wait">
                 <motion.div
@@ -142,8 +153,8 @@ export default function App() {
                   transition={{ duration: 0.2 }}
                 >
                   {currentView === 'newsfeed' && <NewsfeedView onOpenCreate={() => setIsCreateOpen(true)} onCommentClick={setActiveCommentPost} refreshKey={feedRefreshKey} />}
-                  {currentView === 'profile' && <ProfileView user={selectedUser ?? undefined} onCommentClick={setActiveCommentPost} />}
-                  {currentView === 'messenger' && <MessengerView />}
+                  {currentView === 'profile' && <ProfileView user={selectedUser ?? undefined} onCommentClick={setActiveCommentPost} onMessageClick={handleMessageUser} />}
+                  {currentView === 'messenger' && <MessengerView targetUserId={messengerTargetUserId} />}
                   {currentView === 'search' && <SearchView onCommentClick={setActiveCommentPost} onUserClick={handleViewProfile} />}
                   {currentView === 'notifications' && <NotificationsView />}
                 </motion.div>
@@ -152,7 +163,14 @@ export default function App() {
             </section>
 
             {activeCommentPost ? (
-              <CommentSidebar post={activeCommentPost} onClose={() => setActiveCommentPost(null)} />
+              <CommentSidebar
+                post={activeCommentPost}
+                onClose={() => setActiveCommentPost(null)}
+                onCommentAdded={() => {
+                  // Cập nhật commentsCount optimistic trên post đang xem
+                  setActiveCommentPost(prev => prev ? { ...prev, commentsCount: (Number(prev.commentsCount ?? 0) + 1) } : prev);
+                }}
+              />
             ) : currentView !== 'profile' ? (
               <RightSidebar onUserClick={handleViewProfile} />
             ) : null}
@@ -165,10 +183,10 @@ export default function App() {
           />
 
           {/* Mobile Bottom Nav */}
-          <nav className="md:hidden fixed bottom-0 w-full bg-white/90 backdrop-blur-xl border-t border-surface-container flex justify-around items-center h-16 px-4 z-50">
+          <nav className="md:hidden fixed bottom-0 w-full bg-surface-container-lowest/90 backdrop-blur-xl border-t border-outline-variant/20 flex justify-around items-center h-16 px-4 z-50">
             <button onClick={() => setView('newsfeed')} className={`p-2 ${currentView === 'newsfeed' ? 'text-primary' : 'text-outline'}`}><Rss className="w-6 h-6" /></button>
             <button onClick={() => setView('search')} className={`p-2 ${currentView === 'search' ? 'text-primary' : 'text-outline'}`}><Search className="w-6 h-6" /></button>
-            <button onClick={() => setIsCreateOpen(true)} className="bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg -mt-8 ring-4 ring-white">
+            <button onClick={() => setIsCreateOpen(true)} className="bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg -mt-8 ring-4 ring-surface-container-lowest">
               <Plus className="w-6 h-6" />
             </button>
             <button onClick={() => setView('notifications')} className={`p-2 ${currentView === 'notifications' ? 'text-primary' : 'text-outline'}`}><Bell className="w-6 h-6" /></button>

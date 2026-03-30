@@ -91,7 +91,7 @@ const AuthView = () => {
           </p>
         </div>
 
-        <div className="bg-white rounded-3xl p-8 shadow-xl shadow-primary/5 border border-outline-variant/10">
+        <div className="bg-surface-container-lowest rounded-3xl p-8 shadow-xl shadow-primary/5 border border-outline-variant/10">
           <form onSubmit={handleSubmit} className="space-y-5">
 
             {/* Register only: Username */}
@@ -105,7 +105,7 @@ const AuthView = () => {
                     type="text"
                     placeholder="yourhandle"
                     autoComplete="username"
-                    className="w-full pl-12 pr-4 py-3 bg-surface-container-low border border-transparent focus:border-primary/30 focus:bg-white rounded-xl outline-none transition-all"
+                    className="w-full pl-12 pr-4 py-3 bg-surface-container-low border border-transparent focus:border-primary/30 focus:bg-surface-container-lowest rounded-xl outline-none transition-all"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                   />
@@ -125,7 +125,7 @@ const AuthView = () => {
                     type="text"
                     placeholder="John Doe"
                     autoComplete="name"
-                    className="w-full pl-12 pr-4 py-3 bg-surface-container-low border border-transparent focus:border-primary/30 focus:bg-white rounded-xl outline-none transition-all"
+                    className="w-full pl-12 pr-4 py-3 bg-surface-container-low border border-transparent focus:border-primary/30 focus:bg-surface-container-lowest rounded-xl outline-none transition-all"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                   />
@@ -145,7 +145,7 @@ const AuthView = () => {
                   type={isLogin ? 'text' : 'email'}
                   placeholder={isLogin ? 'name@example.com or username' : 'name@example.com'}
                   autoComplete={isLogin ? 'username' : 'email'}
-                  className="w-full pl-12 pr-4 py-3 bg-surface-container-low border border-transparent focus:border-primary/30 focus:bg-white rounded-xl outline-none transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-surface-container-low border border-transparent focus:border-primary/30 focus:bg-surface-container-lowest rounded-xl outline-none transition-all"
                   value={emailOrUsername}
                   onChange={(e) => setEmailOrUsername(e.target.value)}
                 />
@@ -163,7 +163,7 @@ const AuthView = () => {
                   placeholder="••••••••"
                   autoComplete={isLogin ? 'current-password' : 'new-password'}
                   minLength={6}
-                  className="w-full pl-12 pr-4 py-3 bg-surface-container-low border border-transparent focus:border-primary/30 focus:bg-white rounded-xl outline-none transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-surface-container-low border border-transparent focus:border-primary/30 focus:bg-surface-container-lowest rounded-xl outline-none transition-all"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />

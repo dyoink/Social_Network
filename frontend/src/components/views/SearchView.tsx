@@ -100,12 +100,13 @@ const SearchView = ({ onCommentClick, onUserClick }: SearchViewProps) => {
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const [userRes] = await Promise.all([
+        const [userRes, postRes] = await Promise.all([
           api.getApiUsersSearch({ q }),
+          api.getApiPostsSearch({ q, page: 1, pageSize: 20 }),
         ]);
         // Search trả về List (không phải paged)
         setUsers(userRes.success && userRes.data ? (userRes.data as UserSummaryDto[]) : []);
-        setPosts([]); // Post search endpoint chưa có — để trống
+        setPosts(postRes.success && postRes.data?.items ? (postRes.data.items as PostDto[]) : []);
         setSearched(true);
       } catch {
         setUsers([]);
@@ -141,7 +142,7 @@ const SearchView = ({ onCommentClick, onUserClick }: SearchViewProps) => {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Tìm kiếm người dùng..."
-            className="w-full pl-12 pr-12 py-4 bg-surface-container-low border border-transparent focus:border-primary/30 focus:bg-white rounded-2xl outline-none transition-all text-lg"
+            className="w-full pl-12 pr-12 py-4 bg-surface-container-low border border-transparent focus:border-primary/30 focus:bg-surface-container-lowest rounded-2xl outline-none transition-all text-lg"
           />
         </div>
       </div>
@@ -157,7 +158,7 @@ const SearchView = ({ onCommentClick, onUserClick }: SearchViewProps) => {
               <button
                 key={t.key}
                 onClick={() => setActiveTab(t.key)}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === t.key ? 'bg-white text-primary shadow-sm' : 'text-outline hover:text-primary'}`}
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${activeTab === t.key ? 'bg-surface-container-lowest text-primary shadow-sm' : 'text-outline hover:text-primary'}`}
               >
                 {t.label}
               </button>

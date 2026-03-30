@@ -9,9 +9,28 @@ namespace SocialNetwork.Api.DTOs.Admin
         public int TotalUsers { get; set; }
         public int TotalPosts { get; set; }
         public int TotalComments { get; set; }
+        public int TotalMessages { get; set; }
+        public int TotalFollows { get; set; }
         public int PendingReports { get; set; }
         public int NewUsersToday { get; set; }
         public int NewPostsToday { get; set; }
+        public int NewCommentsToday { get; set; }
+        public int ActiveUsersWeek { get; set; }
+    }
+
+    // ─── Chart data ──────────────────────────────────────────────────────────
+
+    public class DailyCountDto
+    {
+        public string Date { get; set; } = string.Empty; // yyyy-MM-dd
+        public int Count { get; set; }
+    }
+
+    public class GrowthChartDto
+    {
+        public List<DailyCountDto> Users { get; set; } = [];
+        public List<DailyCountDto> Posts { get; set; } = [];
+        public List<DailyCountDto> Comments { get; set; } = [];
     }
 
     // ─── Admin User view ──────────────────────────────────────────────────────
@@ -27,6 +46,8 @@ namespace SocialNetwork.Api.DTOs.Admin
         public string? AvatarUrl { get; set; }
         public int PostCount { get; set; }
         public int FollowerCount { get; set; }
+        public int FollowingCount { get; set; }
+        public int CommentCount { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
@@ -42,6 +63,20 @@ namespace SocialNetwork.Api.DTOs.Admin
         public int LikesCount { get; set; }
         public int CommentsCount { get; set; }
         public int ReportCount { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    // ─── Admin Comment view ───────────────────────────────────────────────────
+
+    public class AdminCommentDto
+    {
+        public int Id { get; set; }
+        public int PostId { get; set; }
+        public string AuthorUsername { get; set; } = string.Empty;
+        public string? AuthorAvatarUrl { get; set; }
+        public string Content { get; set; } = string.Empty;
+        public int? ParentId { get; set; }
+        public string? PostContentPreview { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
@@ -79,5 +114,11 @@ namespace SocialNetwork.Api.DTOs.Admin
     {
         [Required, StringLength(50)]
         public string Role { get; set; } = string.Empty;
+    }
+
+    public class AdminResetPasswordDto
+    {
+        [Required, StringLength(100, MinimumLength = 6)]
+        public string NewPassword { get; set; } = string.Empty;
     }
 }

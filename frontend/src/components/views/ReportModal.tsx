@@ -36,15 +36,15 @@ const ReportModal = ({ targetPostId, targetUserId, onClose }: ReportModalProps) 
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="bg-surface-container-lowest w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="px-6 py-5 flex items-center justify-between border-b border-gray-100">
+        <div className="px-6 py-5 flex items-center justify-between border-b border-outline-variant/20">
           <div className="flex items-center gap-2">
             <Flag className="w-5 h-5 text-red-500" />
-            <h2 className="font-bold text-lg text-gray-900">Báo cáo vi phạm</h2>
+            <h2 className="font-bold text-lg text-on-surface">Báo cáo vi phạm</h2>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-400" />
+          <button onClick={onClose} className="p-1.5 hover:bg-surface-container rounded-lg transition-colors">
+            <X className="w-5 h-5 text-outline" />
           </button>
         </div>
 
@@ -53,22 +53,22 @@ const ReportModal = ({ targetPostId, targetUserId, onClose }: ReportModalProps) 
           {submitted ? (
             <div className="text-center py-6">
               <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
-              <h3 className="font-bold text-gray-900 text-lg">Đã gửi báo cáo!</h3>
-              <p className="text-gray-500 text-sm mt-2">Cảm ơn bạn. Chúng tôi sẽ xem xét và xử lý sớm nhất có thể.</p>
+              <h3 className="font-bold text-on-surface text-lg">Đã gửi báo cáo!</h3>
+              <p className="text-outline text-sm mt-2">Cảm ơn bạn. Chúng tôi sẽ xem xét và xử lý sớm nhất có thể.</p>
               <button onClick={onClose} className="mt-6 px-6 py-2.5 bg-primary text-white rounded-full text-sm font-semibold hover:bg-primary/90">
                 Đóng
               </button>
             </div>
           ) : (
             <>
-              <p className="text-sm text-gray-500 mb-5">
+              <p className="text-sm text-outline mb-5">
                 Chọn lý do báo cáo {targetPostId ? 'bài viết' : 'tài khoản'} này. Thông tin báo cáo sẽ được bảo mật.
               </p>
 
               {/* Reason selection */}
               <div className="space-y-2 mb-5">
                 {reasons.map(r => (
-                  <label key={r.key} className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${reason === r.key ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <label key={r.key} className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${reason === r.key ? 'border-primary bg-primary/5' : 'border-outline-variant/20 hover:border-outline-variant/40'}`}>
                     <input
                       type="radio"
                       name="reason"
@@ -77,7 +77,7 @@ const ReportModal = ({ targetPostId, targetUserId, onClose }: ReportModalProps) 
                       onChange={() => setReason(r.key)}
                       className="accent-primary"
                     />
-                    <span className="text-sm font-medium text-gray-800">{r.label}</span>
+                    <span className="text-sm font-medium text-on-surface-variant">{r.label}</span>
                   </label>
                 ))}
               </div>
@@ -85,7 +85,7 @@ const ReportModal = ({ targetPostId, targetUserId, onClose }: ReportModalProps) 
               {/* Detail */}
               <textarea
                 placeholder="Mô tả thêm (tùy chọn)..."
-                className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:border-primary/50 text-gray-700 placeholder:text-gray-400"
+                className="w-full border border-outline-variant/20 rounded-xl p-3 text-sm resize-none focus:outline-none focus:border-primary/50 text-on-surface-variant placeholder:text-outline bg-surface-container-low"
                 rows={3}
                 value={detail}
                 onChange={e => setDetail(e.target.value)}

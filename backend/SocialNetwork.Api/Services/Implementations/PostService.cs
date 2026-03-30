@@ -220,7 +220,7 @@ namespace SocialNetwork.Api.Services.Implementations
                 .ToDictionaryAsync(x => x.PostId, x => x.Count);
 
             var commentCounts = await _context.Comments
-                .Where(c => postIds.Contains(c.PostId) && c.ParentId == null)
+                .Where(c => postIds.Contains(c.PostId))
                 .GroupBy(c => c.PostId)
                 .Select(g => new { PostId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.PostId, x => x.Count);
@@ -254,7 +254,7 @@ namespace SocialNetwork.Api.Services.Implementations
         private async Task<PostDto> MapToDtoAsync(Post post, int? currentUserId)
         {
             var likesCount    = await _context.PostLikes.CountAsync(pl => pl.PostId == post.Id);
-            var commentsCount = await _context.Comments.CountAsync(c => c.PostId == post.Id && c.ParentId == null);
+            var commentsCount = await _context.Comments.CountAsync(c => c.PostId == post.Id);
             var isLiked = currentUserId.HasValue &&
                           await _context.PostLikes.AnyAsync(pl => pl.PostId == post.Id && pl.UserId == currentUserId.Value);
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Search, Bell, LogOut, MessageSquare } from 'lucide-react';
+import { Search, Bell, LogOut, MessageSquare, Sun, Moon } from 'lucide-react';
 import { View, UserProfile } from '../../types';
 import { getSocialNetworkApiV1 } from '../../api/api-generated';
+import useThemeStore from '../../store/themeStore';
 
 interface TopNavProps {
   currentView: View;
@@ -15,6 +16,7 @@ const TopNav = ({ currentView, setView, onProfileClick, onLogout, user }: TopNav
   const avatar = user?.avatar || `https://picsum.photos/seed/${user?.id || 'me'}/100/100`;
   const [notifCount, setNotifCount] = useState(0);
   const [msgCount,   setMsgCount]   = useState(0);
+  const { theme, toggleTheme } = useThemeStore();
 
   useEffect(() => {
     if (!user) return;
@@ -74,6 +76,13 @@ const TopNav = ({ currentView, setView, onProfileClick, onLogout, user }: TopNav
                 {notifCount > 99 ? '99+' : notifCount}
               </span>
             )}
+          </button>
+          <button
+            className="p-2 text-outline hover:bg-surface-container rounded-full transition-colors"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Chuyển sang sáng' : 'Chuyển sang tối'}
+          >
+            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
           <button className="p-2 text-outline hover:bg-surface-container rounded-full transition-colors" onClick={onLogout} title="Đăng xuất">
             <LogOut className="w-5 h-5" />

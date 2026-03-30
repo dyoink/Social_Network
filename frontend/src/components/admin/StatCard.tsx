@@ -16,7 +16,7 @@ const colorMap = {
 };
 
 const StatCard = ({ label, value, sub, color = 'primary', icon }: StatCardProps) => (
-  <div className="bg-white rounded-2xl p-6 border border-outline-variant/10 shadow-sm flex items-start gap-4">
+  <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/10 shadow-sm flex items-start gap-4">
     <div className={`p-3 rounded-xl ${colorMap[color]}`}>{icon}</div>
     <div>
       <p className="text-sm text-outline font-medium">{label}</p>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Loader, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { CheckCircle2, Loader, ChevronLeft, ChevronRight, Clock, Trash2 } from 'lucide-react';
 import { getSocialNetworkApiV1, type ReportDto } from '../../../api/api-generated';
 import { timeAgo } from '../../../utils/time';
+import toast from 'react-hot-toast';
 
 const reasonLabel: Record<string, string> = {
   spam:     'Spam',
@@ -43,7 +44,19 @@ const AdminReportsView = () => {
     try {
       await api.putApiAdminReportsIdResolve(report.id!);
       setReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'Resolved', resolvedAt: new Date().toISOString() } : r));
-    } catch { /* ignore */ } finally { setActionId(null); }
+      toast.success('Đã đánh dấu đã xử lý');
+    } catch { toast.error('Thao tác thất bại'); } finally { setActionId(null); }
+  };
+
+  const handleDelete = async (report: ReportDto) => {
+    if (!confirm(`Xóa báo cáo #${report.id}?`)) return;
+    setActionId(Number(report.id!));
+    try {
+      await api.deleteApiAdminReportsId(report.id!);
+      setReports(prev => prev.filter(r => r.id !== report.id));
+      setTotal(t => t - 1);
+      toast.success('Đã xóa báo cáo');
+    } catch { toast.error('Xóa thất bại'); } finally { setActionId(null); }
   };
 
   const totalPages = Math.ceil(total / pageSize);
@@ -51,8 +64,8 @@ const AdminReportsView = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold font-headline text-gray-900">Báo cáo vi phạm</h1>
-        <p className="text-gray-500 text-sm mt-1">{total.toLocaleString()} báo cáo</p>
+        <h1 className="text-3xl font-extrabold font-headline text-on-surface">Báo cáo vi phạm</h1>
+        <p className="text-outline text-sm mt-1">{total.toLocaleString()} báo cáo</p>
       </div>
 
       {/* Status filter */}
@@ -62,7 +75,7 @@ const AdminReportsView = () => {
             key={item.key}
             onClick={() => handleStatusChange(item.key)}
             className={`px-5 py-2 rounded-full text-sm font-semibold transition-all
-              ${status === item.key ? 'bg-primary text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+              ${status === item.key ? 'bg-primary text-white shadow-sm' : 'bg-surface-container-lowest text-outline border border-outline-variant/20 hover:bg-surface-container-low'}`}
           >
             {item.label}
           </button>
@@ -70,39 +83,39 @@ const AdminReportsView = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/10 overflow-hidden overflow-x-auto">
         {loading ? (
           <div className="flex justify-center py-16"><Loader className="w-6 h-6 animate-spin text-primary" /></div>
         ) : reports.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
+          <div className="text-center py-16 text-outline">
             <CheckCircle2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
             <p>Không có báo cáo nào</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="bg-surface-container-low border-b border-outline-variant/10">
               <tr>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Người báo cáo</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Đối tượng</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lý do</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Mô tả</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Thời gian</th>
-                <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Hành động</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Người báo cáo</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Đối tượng</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Lý do</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Mô tả</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Trạng thái</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Thời gian</th>
+                <th className="text-right px-6 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Hành động</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-outline-variant/10">
               {reports.map(report => (
                 <React.Fragment key={report.id}>
-                  <tr className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-gray-800">@{report.reporterUsername}</td>
+                  <tr className="hover:bg-surface-container-low/50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-on-surface-variant">@{report.reporterUsername}</td>
                     <td className="px-4 py-4">
                       {report.targetUsername ? (
                         <span className="text-blue-600">@{report.targetUsername}</span>
                       ) : report.targetPostId ? (
                         <div>
-                          <span className="text-xs text-gray-400 block">Bài viết #{report.targetPostId}</span>
-                          <p className="text-gray-700 text-xs line-clamp-2 mt-0.5">{report.targetPostContent}</p>
+                          <span className="text-xs text-outline block">Bài viết #{report.targetPostId}</span>
+                          <p className="text-on-surface-variant text-xs line-clamp-2 mt-0.5">{report.targetPostContent}</p>
                         </div>
                       ) : '—'}
                     </td>
@@ -111,7 +124,7 @@ const AdminReportsView = () => {
                         {reasonLabel[report.reason ?? ''] ?? report.reason}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-gray-500 text-xs max-w-[180px]">
+                    <td className="px-4 py-4 text-outline text-xs max-w-[180px]">
                       <p className="line-clamp-2">{report.detail || '—'}</p>
                     </td>
                     <td className="px-4 py-4 text-center">
@@ -125,20 +138,28 @@ const AdminReportsView = () => {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-4 text-gray-400 text-xs whitespace-nowrap">{timeAgo(report.createdAt?.toString())}</td>
+                    <td className="px-4 py-4 text-outline text-xs whitespace-nowrap">{timeAgo(report.createdAt?.toString())}</td>
                     <td className="px-6 py-4 text-right">
-                      {report.status !== 'Resolved' && (
-                        actionId === report.id ? (
-                          <Loader className="w-4 h-4 animate-spin text-gray-400 ml-auto" />
-                        ) : (
-                          <button
-                            onClick={() => handleResolve(report)}
-                            className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                          >
-                            Đánh dấu đã xử lý
+                      <div className="flex items-center justify-end gap-2">
+                        {report.status !== 'Resolved' && (
+                          actionId === report.id ? (
+                            <Loader className="w-4 h-4 animate-spin text-outline" />
+                          ) : (
+                            <button
+                              onClick={() => handleResolve(report)}
+                              className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                            >
+                              Đánh dấu đã xử lý
+                            </button>
+                          )
+                        )}
+                        {actionId !== report.id && (
+                          <button onClick={() => handleDelete(report)} title="Xóa báo cáo"
+                            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors">
+                            <Trash2 className="w-4 h-4" />
                           </button>
-                        )
-                      )}
+                        )}
+                      </div>
                     </td>
                   </tr>
                 </React.Fragment>
@@ -148,13 +169,13 @@ const AdminReportsView = () => {
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-            <p className="text-sm text-gray-500">Trang {page} / {totalPages}</p>
+          <div className="flex items-center justify-between px-6 py-4 border-t border-outline-variant/10">
+            <p className="text-sm text-outline">Trang {page} / {totalPages}</p>
             <div className="flex gap-2">
-              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-40">
+              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-2 rounded-lg hover:bg-surface-container disabled:opacity-40">
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-40">
+              <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-2 rounded-lg hover:bg-surface-container disabled:opacity-40">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

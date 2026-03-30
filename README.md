@@ -28,8 +28,9 @@
 - **Search** — Tìm kiếm người dùng và bài viết
 - **Messenger** — Nhắn tin riêng tư real-time
 - **Notifications** — Thông báo khi có like, comment, follow
-- **Admin Panel** — Quản lý users, posts, reports (dành cho role Admin)
-- **Report System** — Báo cáo người dùng / bài viết vi phạm
+- **Admin Panel** — Dashboard biểu đồ (area, bar, pie), quản lý users (ban, đổi role, reset mật khẩu, xem chi tiết), posts (xem chi tiết, ảnh), comments, reports
+- **Report System** — Báo cáo người dùng / bài viết vi phạm, admin xóa report
+- **Dark Mode** — Chuyển đổi dark/light mode, anti-flash, lưu preference
 - **Health Check** — Endpoint `/health` để monitor
 
 Xem chi tiết trạng thái tại [FEATURES.md](FEATURES.md).
@@ -131,11 +132,12 @@ Hoặc dùng API admin (nếu đã là Admin):
 
 2. Đăng nhập lại, click vào icon **Shield** (🛡️) trên thanh navigation trên cùng.
 
-3. Admin Panel bao gồm 4 tab:
-   - **Dashboard** — Thống kê tổng quan (users, posts, comments, reports)
-   - **Users** — Quản lý tài khoản (ban/unban, đổi role, xóa)
-   - **Posts** — Quản lý bài viết (xem, xóa)
-   - **Reports** — Xử lý báo cáo vi phạm
+3. Admin Panel bao gồm 5 tab:
+   - **Dashboard** — Thống kê tổng quan + biểu đồ tăng trưởng (Area Chart), hoạt động hôm nay (Bar Chart), phân bố nội dung (Pie Chart)
+   - **Users** — Quản lý tài khoản (ban/unban, đổi role, reset mật khẩu, xem chi tiết, lọc theo trạng thái)
+   - **Posts** — Quản lý bài viết (xem chi tiết + ảnh, xóa)
+   - **Comments** — Quản lý bình luận (tìm kiếm, lọc theo bài viết, xóa)
+   - **Reports** — Xử lý báo cáo vi phạm (resolve, xóa)
 
 ---
 

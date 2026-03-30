@@ -12,26 +12,80 @@ public class AdminService(SocialDbContext db) : IAdminService
     {
         var today = DateTime.UtcNow.Date;
         var tomorrow = today.AddDays(1);
+        var weekAgo = today.AddDays(-7);
 
         var totalUsers    = await db.Users.CountAsync();
         var totalPosts    = await db.Posts.CountAsync();
         var totalComments = await db.Comments.CountAsync();
+        var totalMessages = await db.Messages.CountAsync();
+        var totalFollows  = await db.Follows.CountAsync();
         var pendingReports = await db.Reports.CountAsync(r => r.Status == "Pending");
         var newUsersToday  = await db.Users.CountAsync(u => u.CreatedAt >= today && u.CreatedAt < tomorrow);
         var newPostsToday  = await db.Posts.CountAsync(p => p.CreatedAt >= today && p.CreatedAt < tomorrow);
+        var newCommentsToday = await db.Comments.CountAsync(c => c.CreatedAt >= today && c.CreatedAt < tomorrow);
+        // Ước tính active users = đã tạo post, comment, like hoặc message trong 7 ngày gần nhất
+        var activeUsersWeek = await db.Users.CountAsync(u =>
+            u.Posts.Any(p => p.CreatedAt >= weekAgo) ||
+            u.Comments.Any(c => c.CreatedAt >= weekAgo) ||
+            u.MessagesSent.Any(m => m.CreatedAt >= weekAgo));
 
         return new AdminStatsDto
         {
-            TotalUsers     = totalUsers,
-            TotalPosts     = totalPosts,
-            TotalComments  = totalComments,
-            PendingReports = pendingReports,
-            NewUsersToday  = newUsersToday,
-            NewPostsToday  = newPostsToday,
+            TotalUsers       = totalUsers,
+            TotalPosts       = totalPosts,
+            TotalComments    = totalComments,
+            TotalMessages    = totalMessages,
+            TotalFollows     = totalFollows,
+            PendingReports   = pendingReports,
+            NewUsersToday    = newUsersToday,
+            NewPostsToday    = newPostsToday,
+            NewCommentsToday = newCommentsToday,
+            ActiveUsersWeek  = activeUsersWeek,
         };
     }
 
-    public async Task<PagedResult<AdminUserDto>> GetUsersAsync(string? q, string? role, int page, int pageSize)
+    public async Task<GrowthChartDto> GetGrowthChartAsync(int days)
+    {
+        // Giới hạn tối đa 90 ngày, tối thiểu 7
+        days = Math.Clamp(days, 7, 90);
+        var startDate = DateTime.UtcNow.Date.AddDays(-days + 1);
+
+        var users = await db.Users
+            .Where(u => u.CreatedAt >= startDate)
+            .GroupBy(u => u.CreatedAt.Date)
+            .Select(g => new DailyCountDto { Date = g.Key.ToString("yyyy-MM-dd"), Count = g.Count() })
+            .ToListAsync();
+
+        var posts = await db.Posts
+            .Where(p => p.CreatedAt >= startDate)
+            .GroupBy(p => p.CreatedAt.Date)
+            .Select(g => new DailyCountDto { Date = g.Key.ToString("yyyy-MM-dd"), Count = g.Count() })
+            .ToListAsync();
+
+        var comments = await db.Comments
+            .Where(c => c.CreatedAt >= startDate)
+            .GroupBy(c => c.CreatedAt.Date)
+            .Select(g => new DailyCountDto { Date = g.Key.ToString("yyyy-MM-dd"), Count = g.Count() })
+            .ToListAsync();
+
+        // Đảm bảo tất cả ngày đều có entry (fill 0 cho ngày trống)
+        var allDates = Enumerable.Range(0, days)
+            .Select(i => startDate.AddDays(i).ToString("yyyy-MM-dd"))
+            .ToList();
+
+        var userMap = users.ToDictionary(x => x.Date, x => x.Count);
+        var postMap = posts.ToDictionary(x => x.Date, x => x.Count);
+        var commentMap = comments.ToDictionary(x => x.Date, x => x.Count);
+
+        return new GrowthChartDto
+        {
+            Users = allDates.Select(d => new DailyCountDto { Date = d, Count = userMap.GetValueOrDefault(d) }).ToList(),
+            Posts = allDates.Select(d => new DailyCountDto { Date = d, Count = postMap.GetValueOrDefault(d) }).ToList(),
+            Comments = allDates.Select(d => new DailyCountDto { Date = d, Count = commentMap.GetValueOrDefault(d) }).ToList(),
+        };
+    }
+
+    public async Task<PagedResult<AdminUserDto>> GetUsersAsync(string? q, string? role, string? status, int page, int pageSize)
     {
         var query = db.Users.AsQueryable();
 
@@ -41,9 +95,14 @@ public class AdminService(SocialDbContext db) : IAdminService
         if (!string.IsNullOrWhiteSpace(role))
             query = query.Where(u => u.Role == role);
 
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (status == "active") query = query.Where(u => u.IsActive);
+            else if (status == "banned") query = query.Where(u => !u.IsActive);
+        }
+
         var total = await query.CountAsync();
 
-        // Đếm follower và post bằng subquery
         var items = await query
             .OrderByDescending(u => u.CreatedAt)
             .Skip((page - 1) * pageSize)
@@ -59,6 +118,8 @@ public class AdminService(SocialDbContext db) : IAdminService
                 AvatarUrl      = u.AvatarUrl,
                 PostCount      = u.Posts.Count,
                 FollowerCount  = u.Followers.Count,
+                FollowingCount = u.Following.Count,
+                CommentCount   = u.Comments.Count,
                 CreatedAt      = u.CreatedAt,
             })
             .ToListAsync();
@@ -81,6 +142,15 @@ public class AdminService(SocialDbContext db) : IAdminService
         await db.Users
             .Where(u => u.Id == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(u => u.Role, role));
+    }
+
+    public async Task ResetPasswordAsync(int userId, string newPassword)
+    {
+        var hash = BCrypt.Net.BCrypt.HashPassword(newPassword, workFactor: 12);
+        var updated = await db.Users
+            .Where(u => u.Id == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.PasswordHash, hash));
+        if (updated == 0) throw new KeyNotFoundException("Không tìm thấy user.");
     }
 
     public async Task DeleteUserAsync(int userId)
@@ -129,6 +199,46 @@ public class AdminService(SocialDbContext db) : IAdminService
         await db.SaveChangesAsync();
     }
 
+    public async Task<PagedResult<AdminCommentDto>> GetCommentsAsync(string? q, int? postId, int page, int pageSize)
+    {
+        var query = db.Comments.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(q))
+            query = query.Where(c => c.Content.Contains(q) || c.User.Username.Contains(q));
+
+        if (postId.HasValue)
+            query = query.Where(c => c.PostId == postId.Value);
+
+        var total = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(c => c.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(c => new AdminCommentDto
+            {
+                Id                 = c.Id,
+                PostId             = c.PostId,
+                AuthorUsername     = c.User.Username,
+                AuthorAvatarUrl    = c.User.AvatarUrl,
+                Content            = c.Content,
+                ParentId           = c.ParentId,
+                PostContentPreview = c.Post.Content.Substring(0, Math.Min(c.Post.Content.Length, 80)),
+                CreatedAt          = c.CreatedAt,
+            })
+            .ToListAsync();
+
+        return PagedResult<AdminCommentDto>.Create(items, total, page, pageSize);
+    }
+
+    public async Task DeleteCommentAsync(int commentId)
+    {
+        var comment = await db.Comments.FindAsync(commentId)
+            ?? throw new KeyNotFoundException("Không tìm thấy bình luận.");
+        db.Comments.Remove(comment);
+        await db.SaveChangesAsync();
+    }
+
     public async Task<PagedResult<ReportDto>> GetReportsAsync(string? status, int page, int pageSize)
     {
         var query = db.Reports.AsQueryable();
@@ -167,5 +277,13 @@ public class AdminService(SocialDbContext db) : IAdminService
             .ExecuteUpdateAsync(s => s
                 .SetProperty(r => r.Status, "Resolved")
                 .SetProperty(r => r.ResolvedAt, DateTime.UtcNow));
+    }
+
+    public async Task DeleteReportAsync(int reportId)
+    {
+        var report = await db.Reports.FindAsync(reportId)
+            ?? throw new KeyNotFoundException("Không tìm thấy báo cáo.");
+        db.Reports.Remove(report);
+        await db.SaveChangesAsync();
     }
 }

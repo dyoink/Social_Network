@@ -1,6 +1,6 @@
 # 📋 FEATURES — Social Network App
 
-> **Cập nhật lần cuối:** 30/03/2026 — Phase 0–12 hoàn thành. Tất cả tính năng cơ bản + UX improvements đều xong.
+> **Cập nhật lần cuối:** 30/03/2026 — Phase 0–13 hoàn thành. Dark mode, admin panel nâng cấp toàn diện (biểu đồ, quản lý comments, reset mật khẩu, xem chi tiết).
 
 ---
 
@@ -146,15 +146,25 @@
 | Chức năng | Mô tả | Trạng thái |
 |---|---|---|
 | Route `/admin` | Chỉ render khi `user.role === 'Admin'` | ✅ |
-| Dashboard stats | Tổng users/posts/comments, pending reports, mới hôm nay | ✅ |
-| Quản lý users | Bảng users — search, filter role, phân trang | ✅ |
+| Dashboard stats | Tổng users/posts/comments/messages/follows, pending reports, mới hôm nay, active users tuần | ✅ |
+| Biểu đồ tăng trưởng | Area Chart users/posts/comments theo ngày (7/14/30/60 ngày) | ✅ |
+| Biểu đồ hoạt động | Bar Chart hoạt động hôm nay (users, posts, comments, reports) | ✅ |
+| Biểu đồ phân bố | Pie Chart phân bố nội dung (posts/comments/messages/follows) | ✅ |
+| Thẻ tỷ lệ | Interaction rate, follow rate, reports rate | ✅ |
+| Quản lý users | Bảng users — search, filter role, filter trạng thái (active/banned), phân trang | ✅ |
+| Xem chi tiết user | Modal hiển thị avatar, stats, ngày tạo, vai trò | ✅ |
 | Ban / Unban user | Toggle `IsActive` — admin thao tác ngay trong bảng | ✅ |
 | Đổi role Member ↔ Admin | Confirmation dialog trước khi đổi | ✅ |
+| Reset mật khẩu user | Admin đặt lại mật khẩu cho user — `PUT /api/admin/users/{id}/reset-password` | ✅ |
 | Xóa user vĩnh viễn | Hard delete — confirmation dialog | ✅ |
-| Quản lý posts | Bảng tất cả bài viết — search, xem report count | ✅ |
-| Xóa bài vi phạm | Admin xóa bất kỳ bài nào — confirmation | ✅ |
+| Quản lý posts | Bảng tất cả bài viết — search, xem report count, cột ảnh | ✅ |
+| Xem chi tiết post | Modal hiển thị nội dung đầy đủ, ảnh, thống kê | ✅ |
+| Xóa bài vi phạm | Admin xóa bất kỳ bài nào — confirmation + toast | ✅ |
+| Quản lý bình luận | Bảng comments — search nội dung/tác giả, filter theo postId, phân trang | ✅ |
+| Xóa bình luận (Admin) | Admin xóa bất kỳ comment nào — `DELETE /api/admin/comments/{id}` | ✅ |
 | Xem báo cáo vi phạm | Danh sách reports filter theo Pending/Resolved/All | ✅ |
-| Resolve báo cáo | Đánh dấu report đã xử lý — optimistic update | ✅ |
+| Resolve báo cáo | Đánh dấu report đã xử lý — optimistic update + toast | ✅ |
+| Xóa báo cáo | Admin xóa report — `DELETE /api/admin/reports/{id}` + toast | ✅ |
 | Sidebar Admin | Link "Admin Panel" chỉ hiện với user có role Admin | ✅ |
 
 ---
@@ -187,6 +197,8 @@
 | Toast notifications | `react-hot-toast` — thông báo lưu/xóa/lỗi | ✅ |
 | Error boundary | `ErrorBoundary.tsx` bao quanh main content section | ✅ |
 | Optimistic updates | Like, follow, report resolve — có rollback | ✅ |
+| Dark mode / Light mode | Chuyển đổi theme với anti-flash, lưu localStorage, CSS variables Material Design 3 | ✅ |
+| Theme toggle UI | Nút Sun/Moon trên Sidebar, tự động áp dụng `.dark` class | ✅ |
 
 ---
 
@@ -220,7 +232,6 @@
 | Infinite scroll thực sự | IntersectionObserver thay nút Load More |
 | Skeleton loading | Thêm `PostCardSkeleton` cho NewsfeedView |
 | Toast notifications | `react-hot-toast` cho mọi action |
-| Dark mode | TailwindCSS v4 dark variant sẵn sàng |
 | Tìm kiếm bài viết | `GET /api/posts/search?q=` mới |
 | Chặn người dùng (Block) | Thêm bảng `blocks` vào PostgreSQL |
 | 2FA / OAuth | Ngoài scope giai đoạn này |

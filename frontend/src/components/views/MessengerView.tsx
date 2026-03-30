@@ -23,7 +23,7 @@ const ConversationItem = ({ conv, active, currentUserId, onClick }: Conversation
 
   return (
     <div
-      className={`p-4 rounded-xl flex gap-4 cursor-pointer transition-all ${active ? 'bg-white shadow-sm border-l-4 border-primary' : 'hover:bg-white'}`}
+      className={`p-4 rounded-xl flex gap-4 cursor-pointer transition-all ${active ? 'bg-surface-container-lowest shadow-sm border-l-4 border-primary' : 'hover:bg-surface-container-lowest'}`}
       onClick={onClick}
     >
       <img alt={name} className="w-12 h-12 rounded-full object-cover flex-shrink-0" src={avatar} referrerPolicy="no-referrer" />
@@ -60,7 +60,12 @@ const MessageBubble = ({ msg, isSent }: { msg: MessageDto; isSent: boolean }) =>
 
 // ─── MessengerView ─────────────────────────────────────────────────────────────
 
-const MessengerView = () => {
+interface MessengerViewProps {
+  /** Mở conversation với user cụ thể (từ nút "Nhắn tin" trên Profile) */
+  targetUserId?: number | null;
+}
+
+const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
   const api = getSocialNetworkApiV1();
   const { user: currentUser } = useAuthStore();
   const currentUserId = Number(currentUser?.id ?? 0);
@@ -86,6 +91,24 @@ const MessengerView = () => {
       .catch(console.error)
       .finally(() => setConvLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tự động mở conversation với targetUserId (từ Profile "Nhắn tin")
+  useEffect(() => {
+    if (!targetUserId || targetUserId === currentUserId) return;
+    api.postApiConversations({ targetUserId })
+      .then(res => {
+        if (res.success && res.data) {
+          const convId = Number(res.data.id);
+          setActiveConvId(convId);
+          // Thêm conversation vào danh sách nếu chưa có
+          setConversations(prev => {
+            if (prev.some(c => Number(c.id) === convId)) return prev;
+            return [res.data!, ...prev];
+          });
+        }
+      })
+      .catch(console.error);
+  }, [targetUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load messages khi chọn conversation
   useEffect(() => {
@@ -221,7 +244,7 @@ const MessengerView = () => {
             </div>
 
             {/* Input */}
-            <footer className="p-6 bg-white/50 backdrop-blur-md border-t border-surface-container">
+            <footer className="p-6 bg-surface-container-low/50 backdrop-blur-md border-t border-surface-container">
               <div className="bg-surface-container-low rounded-full p-2 flex items-center gap-2">
                 <input
                   className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 px-2 text-on-surface placeholder:text-outline"

@@ -14,7 +14,7 @@ const SidebarLink = ({ active, icon, label, onClick }: { active: boolean, icon: 
   <button 
     onClick={onClick}
     className={`flex items-center gap-3 px-4 py-3 rounded-xl font-headline font-medium text-sm transition-all ${
-      active ? 'bg-white text-primary shadow-sm' : 'text-outline hover:translate-x-1 hover:text-primary'
+      active ? 'bg-surface-container-lowest text-primary shadow-sm' : 'text-outline hover:translate-x-1 hover:text-primary'
     }`}
   >
     {icon}

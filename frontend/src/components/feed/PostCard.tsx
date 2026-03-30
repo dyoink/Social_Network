@@ -1,11 +1,67 @@
 import { useState, FC } from 'react';
-import { ThumbsUp, Heart, Smile, Info, MoreHorizontal, Globe, MessageCircle, Share2, Camera, Flag, Pencil, Trash2, Check, X } from 'lucide-react';
+import { ThumbsUp, Heart, Smile, Info, MoreHorizontal, Globe, MessageCircle, Share2, Camera, Flag, Pencil, Trash2, Check, X, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
-import { getSocialNetworkApiV1, type PostDto } from '../../api/api-generated';
+import { getSocialNetworkApiV1, type PostDto, type UserDto } from '../../api/api-generated';
 import useAuthStore from '../../store/authStore';
 import { timeAgo, formatCount } from '../../utils/time';
 import ReportModal from '../views/ReportModal';
+
+// ─── Inline comment input cho mobile/tablet ─────────────────────────────────
+const InlineMobileComment = ({ postId, currentUser, onCommentAdded }: { postId: number; currentUser: UserDto | null; onCommentAdded: () => void }) => {
+  const api = getSocialNetworkApiV1();
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const handleSubmit = async () => {
+    const content = text.trim();
+    if (!content || sending) return;
+    setSending(true);
+    try {
+      const res = await api.postApiComments({ postId, content });
+      if (res.success) {
+        setText('');
+        onCommentAdded();
+        toast.success('Đã bình luận.');
+      }
+    } catch {
+      toast.error('Gửi bình luận thất bại.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="flex gap-3 mt-2">
+      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+        <img
+          alt="User"
+          src={currentUser?.avatarUrl || `https://picsum.photos/seed/${currentUser?.username}/100/100`}
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover"
+        />
+      </div>
+      <div className="flex-1 relative">
+        <input
+          type="text"
+          placeholder="Viết bình luận..."
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
+          disabled={sending}
+          className="w-full bg-surface-container-low border-none focus:ring-1 focus:ring-primary/30 rounded-2xl py-2 px-4 pr-10 text-sm text-on-surface placeholder:text-outline"
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={!text.trim() || sending}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-primary disabled:text-outline transition-colors"
+        >
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 interface PostCardProps {
   post: PostDto;
@@ -148,7 +204,7 @@ const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPos
               <MoreHorizontal className="w-5 h-5" />
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg border border-outline-variant/20 py-1 z-20 min-w-[180px]">
+              <div className="absolute right-0 top-8 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/20 py-1 z-20 min-w-[180px]">
                 {isOwner ? (
                   <>
                     <button
@@ -265,44 +321,45 @@ const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPos
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2 mb-6 relative">
-          {/* Reaction Picker */}
-          <AnimatePresence>
-            {showReactions && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                className="absolute bottom-full left-0 mb-2 bg-white rounded-full shadow-xl border border-outline-variant/20 p-1.5 flex gap-1 z-10"
-                onMouseLeave={() => setShowReactions(false)}
-              >
-                {reactions.map(r => (
-                  <motion.button
-                    key={r.label}
-                    whileHover={{ scale: 1.3, y: -5 }}
-                    onClick={() => { handleLike(); setShowReactions(false); }}
-                    className="p-2 hover:bg-surface-container rounded-full transition-colors"
-                  >
-                    {r.icon}
-                  </motion.button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="flex items-center gap-2 mb-6">
+          {/* Like button + Reaction Picker — wrapper xử lý mouseLeave cho cả 2 */}
+          <div className="flex-1 relative" onMouseLeave={() => setShowReactions(false)}>
+            <AnimatePresence>
+              {showReactions && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  className="absolute bottom-full left-0 mb-2 bg-surface-container-lowest rounded-full shadow-xl border border-outline-variant/20 p-1.5 flex gap-1 z-10"
+                >
+                  {reactions.map(r => (
+                    <motion.button
+                      key={r.label}
+                      whileHover={{ scale: 1.3, y: -5 }}
+                      onClick={() => { handleLike(); setShowReactions(false); }}
+                      className="p-2 hover:bg-surface-container rounded-full transition-colors"
+                    >
+                      {r.icon}
+                    </motion.button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          <button
-            onMouseEnter={() => setShowReactions(true)}
-            onClick={handleLike}
-            disabled={likeLoading}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full transition-all font-medium text-sm disabled:opacity-60 ${
-              isLiked
-                ? 'bg-primary/10 text-primary'
-                : 'bg-secondary-container/30 text-on-secondary-container hover:bg-secondary-container/60'
-            }`}
-          >
-            <ThumbsUp className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-            {isLiked ? 'Liked' : 'Like'}
-          </button>
+            <button
+              onMouseEnter={() => setShowReactions(true)}
+              onClick={handleLike}
+              disabled={likeLoading}
+              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-full transition-all font-medium text-sm disabled:opacity-60 ${
+                isLiked
+                  ? 'bg-primary/10 text-primary'
+                  : 'bg-secondary-container/30 text-on-secondary-container hover:bg-secondary-container/60'
+              }`}
+            >
+              <ThumbsUp className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+              {isLiked ? 'Liked' : 'Like'}
+            </button>
+          </div>
 
           <button
             onClick={handleCommentToggle}
@@ -329,27 +386,9 @@ const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPos
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden lg:hidden"
             >
-              <div className="flex gap-3 mt-2">
-                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                  <img
-                    alt="User"
-                    src={currentUser?.avatarUrl || `https://picsum.photos/seed/${currentUser?.username}/100/100`}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    placeholder="Viết bình luận..."
-                    className="w-full bg-surface-container-low border-none focus:ring-1 focus:ring-primary/30 rounded-2xl py-2 px-4 text-sm text-on-surface placeholder:text-outline"
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button className="p-1 text-outline hover:text-primary transition-colors"><Smile className="w-4 h-4" /></button>
-                    <button className="p-1 text-outline hover:text-primary transition-colors"><Camera className="w-4 h-4" /></button>
-                  </div>
-                </div>
-              </div>
+              <InlineMobileComment postId={Number(post.id)} currentUser={currentUser} onCommentAdded={() => {
+                // Có thể thêm logic cập nhật comment count ở đây nếu cần
+              }} />
             </motion.div>
           )}
         </AnimatePresence>

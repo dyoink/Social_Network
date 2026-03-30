@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Trash2, Loader, ChevronLeft, ChevronRight, Flag } from 'lucide-react';
+import { Search, Trash2, Loader, ChevronLeft, ChevronRight, Flag, Eye, X, Image } from 'lucide-react';
 import { getSocialNetworkApiV1, type AdminPostDto } from '../../../api/api-generated';
 import { timeAgo } from '../../../utils/time';
+import toast from 'react-hot-toast';
 
 const AdminPostsView = () => {
   const api = getSocialNetworkApiV1();
-  const [posts,    setPosts]    = useState<AdminPostDto[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [q,        setQ]        = useState('');
-  const [page,     setPage]     = useState(1);
-  const [total,    setTotal]    = useState(0);
+  const [posts, setPosts] = useState<AdminPostDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [actionId, setActionId] = useState<number | null>(null);
+  const [detailPost, setDetailPost] = useState<AdminPostDto | null>(null);
   const pageSize = 20;
 
   const fetchPosts = (searchQ = q, p = page) => {
@@ -37,7 +39,9 @@ const AdminPostsView = () => {
       await api.deleteApiAdminPostsId(post.id!);
       setPosts(prev => prev.filter(p => p.id !== post.id));
       setTotal(t => t - 1);
-    } catch { /* ignore */ } finally { setActionId(null); }
+      toast.success('Đã xóa bài viết');
+      if (detailPost?.id === post.id) setDetailPost(null);
+    } catch { toast.error('Xóa thất bại'); } finally { setActionId(null); }
   };
 
   const totalPages = Math.ceil(total / pageSize);
@@ -45,110 +49,111 @@ const AdminPostsView = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-extrabold font-headline text-gray-900">Bài viết</h1>
-        <p className="text-gray-500 text-sm mt-1">{total.toLocaleString()} bài viết</p>
+        <h1 className="text-3xl font-extrabold font-headline text-on-surface">Bài viết</h1>
+        <p className="text-outline text-sm mt-1">{total.toLocaleString()} bài viết</p>
       </div>
 
-      {/* Search */}
       <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary/50"
-            placeholder="Tìm nội dung hoặc tên tác giả..."
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSearch()}
-          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" />
+          <input className="w-full pl-9 pr-4 py-2.5 border border-outline-variant/20 rounded-xl text-sm focus:outline-none focus:border-primary/50 bg-surface-container-lowest text-on-surface"
+            placeholder="Tìm nội dung hoặc tên tác giả..." value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} />
         </div>
-        <button onClick={handleSearch} className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90">
-          Tìm kiếm
-        </button>
+        <button onClick={handleSearch} className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90">Tìm kiếm</button>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/10 overflow-hidden overflow-x-auto">
         {loading ? (
           <div className="flex justify-center py-16"><Loader className="w-6 h-6 animate-spin text-primary" /></div>
+        ) : posts.length === 0 ? (
+          <div className="text-center py-16 text-outline">Không tìm thấy bài viết nào</div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="bg-surface-container-low border-b border-outline-variant/10">
               <tr>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tác giả</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nội dung</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Like</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Bình luận</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Báo cáo</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ngày đăng</th>
-                <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Hành động</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Tác giả</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Nội dung</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Ảnh</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Like</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Bình luận</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Báo cáo</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Ngày đăng</th>
+                <th className="text-right px-6 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Hành động</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-outline-variant/10">
               {posts.map(post => (
-                <React.Fragment key={post.id}>
-                  <tr className={`hover:bg-gray-50 transition-colors ${(Number(post.reportCount ?? 0)) > 0 ? 'bg-red-50/30' : ''}`}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={post.authorAvatarUrl || `https://picsum.photos/seed/${post.id}/32/32`}
-                          alt=""
-                          className="w-8 h-8 rounded-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                        <span className="font-medium text-gray-800">@{post.authorUsername}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 max-w-xs">
-                      <p className="text-gray-700 line-clamp-2">{post.content}</p>
-                      {post.imageUrl && <span className="text-xs text-primary mt-1 block">📷 Có ảnh</span>}
-                    </td>
-                    <td className="px-4 py-4 text-center text-gray-600">{post.likesCount ?? 0}</td>
-                    <td className="px-4 py-4 text-center text-gray-600">{post.commentsCount ?? 0}</td>
-                    <td className="px-4 py-4 text-center">
-                      {(Number(post.reportCount ?? 0)) > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
-                          <Flag className="w-3 h-3" /> {post.reportCount}
-                        </span>
-                      ) : (
-                        <span className="text-gray-300">—</span>
+                <tr key={post.id} className={`hover:bg-surface-container-low/50 transition-colors ${Number(post.reportCount ?? 0) > 0 ? 'bg-red-50/30 dark:bg-red-500/5' : ''}`}>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <img src={post.authorAvatarUrl || `https://picsum.photos/seed/${post.id}/32/32`} alt="" className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" />
+                      <span className="font-medium text-on-surface-variant">@{post.authorUsername}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 max-w-xs"><p className="text-on-surface-variant line-clamp-2">{post.content}</p></td>
+                  <td className="px-4 py-4 text-center">{post.imageUrl ? <Image className="w-4 h-4 text-primary mx-auto" /> : <span className="text-outline">—</span>}</td>
+                  <td className="px-4 py-4 text-center text-on-surface-variant">{post.likesCount ?? 0}</td>
+                  <td className="px-4 py-4 text-center text-on-surface-variant">{post.commentsCount ?? 0}</td>
+                  <td className="px-4 py-4 text-center">
+                    {Number(post.reportCount ?? 0) > 0 ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700"><Flag className="w-3 h-3" /> {post.reportCount}</span>
+                    ) : <span className="text-outline">—</span>}
+                  </td>
+                  <td className="px-4 py-4 text-outline text-xs whitespace-nowrap">{timeAgo(post.createdAt?.toString())}</td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {actionId === post.id ? <Loader className="w-4 h-4 animate-spin text-outline" /> : (
+                        <>
+                          <button onClick={() => setDetailPost(post)} title="Xem chi tiết" className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"><Eye className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(post)} title="Xóa bài viết" className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        </>
                       )}
-                    </td>
-                    <td className="px-4 py-4 text-gray-400 text-xs whitespace-nowrap">{timeAgo(post.createdAt?.toString())}</td>
-                    <td className="px-6 py-4 text-right">
-                      {actionId === post.id ? (
-                        <Loader className="w-4 h-4 animate-spin text-gray-400 ml-auto" />
-                      ) : (
-                        <button
-                          onClick={() => handleDelete(post)}
-                          title="Xóa bài viết"
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                </React.Fragment>
+                    </div>
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>
         )}
-
-        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
-            <p className="text-sm text-gray-500">Trang {page} / {totalPages}</p>
+          <div className="flex items-center justify-between px-6 py-4 border-t border-outline-variant/10">
+            <p className="text-sm text-outline">Trang {page} / {totalPages} ({total} kết quả)</p>
             <div className="flex gap-2">
-              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-40">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-40">
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-2 rounded-lg hover:bg-surface-container disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button>
+              <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-2 rounded-lg hover:bg-surface-container disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Detail modal */}
+      {detailPost && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={() => setDetailPost(null)}>
+          <div className="bg-surface-container-lowest w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-5 flex items-center justify-between border-b border-outline-variant/10">
+              <h2 className="font-bold text-lg text-on-surface">Chi tiết bài viết</h2>
+              <button onClick={() => setDetailPost(null)} className="p-1.5 hover:bg-surface-container rounded-lg"><X className="w-5 h-5 text-outline" /></button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="flex items-center gap-3">
+                <img src={detailPost.authorAvatarUrl || `https://picsum.photos/seed/${detailPost.id}/40/40`} alt="" className="w-10 h-10 rounded-full object-cover" referrerPolicy="no-referrer" />
+                <div>
+                  <p className="font-semibold text-on-surface">@{detailPost.authorUsername}</p>
+                  <p className="text-xs text-outline">{timeAgo(detailPost.createdAt?.toString())}</p>
+                </div>
+              </div>
+              <p className="text-on-surface-variant whitespace-pre-wrap">{detailPost.content}</p>
+              {detailPost.imageUrl && <img src={detailPost.imageUrl} alt="" className="w-full rounded-xl object-cover max-h-80" referrerPolicy="no-referrer" />}
+              <div className="flex gap-6 text-sm text-outline">
+                <span>❤️ {detailPost.likesCount ?? 0} likes</span>
+                <span>💬 {detailPost.commentsCount ?? 0} comments</span>
+                {Number(detailPost.reportCount ?? 0) > 0 && <span className="text-red-600">🚩 {detailPost.reportCount} báo cáo</span>}
+              </div>
+              <button onClick={() => handleDelete(detailPost)} className="w-full py-2.5 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition-all text-sm">Xóa bài viết</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

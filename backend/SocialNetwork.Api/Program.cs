@@ -3,7 +3,7 @@ using Scalar.AspNetCore;
 using SocialNetwork.Api.Data;
 using SocialNetwork.Api.Extensions;
 using SocialNetwork.Api.Middleware;
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── Database ─────────────────────────────────────────────────────────────

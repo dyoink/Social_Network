@@ -106,9 +106,11 @@ const CommentItem = ({ comment, onReply }: CommentItemProps) => {
 interface CommentSidebarProps {
   post: PostDto;
   onClose: () => void;
+  /** Gọi khi thêm comment/reply mới để cập nhật commentsCount ở feed */
+  onCommentAdded?: () => void;
 }
 
-const CommentSidebar = ({ post, onClose }: CommentSidebarProps) => {
+const CommentSidebar = ({ post, onClose, onCommentAdded }: CommentSidebarProps) => {
   const api = getSocialNetworkApiV1();
   const { user: currentUser } = useAuthStore();
 
@@ -174,6 +176,7 @@ const CommentSidebar = ({ post, onClose }: CommentSidebarProps) => {
         setComments(prev => [res.data!, ...prev]);
       }
       setNewComment('');
+      onCommentAdded?.();
       inputRef.current?.focus();
     } catch (e: unknown) {
       toast.error('Gửi bình luận thất bại, vui lòng thử lại.');
@@ -246,7 +249,7 @@ const CommentSidebar = ({ post, onClose }: CommentSidebarProps) => {
       </div>
 
       {/* Input area */}
-      <div className="p-6 bg-white/50 backdrop-blur-md border-t border-surface-container">
+      <div className="p-6 bg-surface-container-low/50 backdrop-blur-md border-t border-surface-container">
         {replyTarget && (
           <div className="flex items-center gap-2 mb-2 text-xs text-primary bg-primary/5 rounded-lg px-3 py-1.5">
             <CornerDownRight className="w-3 h-3 shrink-0" />
