@@ -21,8 +21,8 @@ namespace SocialNetwork.Api.Controllers
         /// <summary>Id của user đang đăng nhập (null nếu anonymous).</summary>
         private int? CurrentUserId =>
             User.Identity?.IsAuthenticated == true
-                ? int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!)
-                : null;
+                && int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
+                ? id : null;
 
         // ─── GET /api/posts/feed ───────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ namespace SocialNetwork.Api.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
-            var result = await _postService.GetFeedAsync(CurrentUserId!.Value, page, pageSize);
+            var result = await _postService.GetFeedAsync(CurrentUserId.GetValueOrDefault(), page, pageSize);
             return Ok(ApiResponse<PagedResult<PostDto>>.Ok(result));
         }
 
@@ -71,7 +71,7 @@ namespace SocialNetwork.Api.Controllers
         [ProducesResponseType<ApiResponse<PostDto>>(201)]
         public async Task<IActionResult> Create([FromBody] CreatePostDto dto)
         {
-            var created = await _postService.CreateAsync(CurrentUserId!.Value, dto);
+            var created = await _postService.CreateAsync(CurrentUserId.GetValueOrDefault(), dto);
             // 201 Created với Location header trỏ đến bài vừa tạo
             return CreatedAtAction(
                 nameof(GetById),
@@ -87,7 +87,7 @@ namespace SocialNetwork.Api.Controllers
         [ProducesResponseType<ApiResponse<PostDto>>(200)]
         public async Task<IActionResult> Update(int id, [FromBody] UpdatePostDto dto)
         {
-            var updated = await _postService.UpdateAsync(id, CurrentUserId!.Value, dto);
+            var updated = await _postService.UpdateAsync(id, CurrentUserId.GetValueOrDefault(), dto);
             return Ok(ApiResponse<PostDto>.Ok(updated));
         }
 
@@ -98,20 +98,57 @@ namespace SocialNetwork.Api.Controllers
         [Authorize]
         public async Task<IActionResult> Delete(int id)
         {
-            await _postService.DeleteAsync(id, CurrentUserId!.Value);
+            await _postService.DeleteAsync(id, CurrentUserId.GetValueOrDefault());
             return Ok(ApiResponse.Ok("Bài viết đã được xóa."));
         }
 
         // ─── POST /api/posts/{id}/like ─────────────────────────────────────────
 
-        /// <summary>Toggle like/unlike. Tự động tạo Notification cho chủ bài.</summary>
+        /// <summary>Toggle reaction. Body: { "reactionType": "Like|Love|Wow|Angry|Sad" }</summary>
         [HttpPost("{id:int}/like")]
         [Authorize]
         [ProducesResponseType<ApiResponse<LikeResultDto>>(200)]
-        public async Task<IActionResult> ToggleLike(int id)
+        public async Task<IActionResult> ToggleLike(int id, [FromBody] ReactDto? dto)
         {
-            var result = await _postService.ToggleLikeAsync(id, CurrentUserId!.Value);
+            var reactionType = dto?.ReactionType ?? "Like";
+            var result = await _postService.ToggleLikeAsync(id, CurrentUserId.GetValueOrDefault(), reactionType);
             return Ok(ApiResponse<LikeResultDto>.Ok(result));
+        }
+
+        // ─── GET /api/posts/hashtag/{tag} ──────────────────────────────────────
+
+        /// <summary>Lấy bài viết theo hashtag.</summary>
+        [HttpGet("hashtag/{tag}")]
+        [ProducesResponseType<ApiResponse<PagedResult<PostDto>>>(200)]
+        public async Task<IActionResult> GetByHashtag(
+            string tag,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var result = await _postService.GetByHashtagAsync(tag, CurrentUserId, page, pageSize);
+            return Ok(ApiResponse<PagedResult<PostDto>>.Ok(result));
+        }
+
+        // ─── GET /api/posts/trending-hashtags ──────────────────────────────────
+
+        /// <summary>Top trending hashtags 24h.</summary>
+        [HttpGet("trending-hashtags")]
+        [ProducesResponseType<ApiResponse<List<TrendingHashtagDto>>>(200)]
+        public async Task<IActionResult> GetTrendingHashtags([FromQuery] int limit = 10)
+        {
+            var result = await _postService.GetTrendingHashtagsAsync(limit);
+            return Ok(ApiResponse<List<TrendingHashtagDto>>.Ok(result));
+        }
+
+        // ─── GET /api/posts/reels ──────────────────────────────────────────────
+
+        /// <summary>Batch Reels ngẫu nhiên (posts có video).</summary>
+        [HttpGet("reels")]
+        [ProducesResponseType<ApiResponse<List<PostDto>>>(200)]
+        public async Task<IActionResult> GetReels([FromQuery] int count = 10)
+        {
+            var result = await _postService.GetReelsAsync(CurrentUserId, count);
+            return Ok(ApiResponse<List<PostDto>>.Ok(result));
         }
 
         // ─── GET /api/posts/search?q= ──────────────────────────────────────────

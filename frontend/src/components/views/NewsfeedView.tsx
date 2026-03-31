@@ -6,14 +6,16 @@ import useAuthStore from '../../store/authStore';
 import { useFeed } from '../../hooks/useFeed';
 import PostCard from '../feed/PostCard';
 import PostCardSkeleton from '../ui/PostCardSkeleton';
+import StoriesRow from '../stories/StoriesRow';
 
 interface NewsfeedViewProps {
   onOpenCreate: () => void;
   onCommentClick?: (post: PostDto) => void;
   refreshKey?: number;
+  onHashtagClick?: (tag: string) => void;
 }
 
-const NewsfeedView = ({ onOpenCreate, onCommentClick, refreshKey }: NewsfeedViewProps) => {
+const NewsfeedView = ({ onOpenCreate, onCommentClick, refreshKey, onHashtagClick }: NewsfeedViewProps) => {
   const { user } = useAuthStore();
   const { posts, loading, error, hasMore, loadMore, updatePostLike, refresh, removePost, updatePost } = useFeed();
 
@@ -42,6 +44,9 @@ const NewsfeedView = ({ onOpenCreate, onCommentClick, refreshKey }: NewsfeedView
 
   return (
     <div className="flex flex-col gap-10">
+      {/* Stories row (Instagram-style) */}
+      <StoriesRow refreshKey={refreshKey} />
+
       {/* Create post prompt */}
       <div
         className="bg-surface-container-lowest p-6 rounded-xl surface-elevation-tonal transition-all hover:bg-surface-bright group cursor-pointer"
@@ -110,6 +115,7 @@ const NewsfeedView = ({ onOpenCreate, onCommentClick, refreshKey }: NewsfeedView
               onLikeToggle={(id, liked, count) => updatePostLike(id, liked, count)}
               onPostDeleted={(id) => { removePost(id); toast.success('Đã xóa bài viết.'); }}
               onPostUpdated={(id, updates) => updatePost(id, updates)}
+              onHashtagClick={onHashtagClick}
             />
           ))}
         </div>

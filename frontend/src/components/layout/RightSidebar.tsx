@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, UserPlus, Check, Loader } from 'lucide-react';
-import { getSocialNetworkApiV1, type UserSummaryDto } from '../../api/api-generated';
+import { TrendingUp, UserPlus, Check, Loader, Hash } from 'lucide-react';
+import { getSocialNetworkApiV1, type UserSummaryDto, type TrendingHashtagDto } from '../../api/api-generated';
 import { UserProfile } from '../../types';
 
 // Chuyển UserSummaryDto → UserProfile tạm để onUserClick tương thích
@@ -8,6 +8,7 @@ function summaryToProfile(u: UserSummaryDto): UserProfile {
   return {
     id: String(u.id ?? ''),
     name: u.fullName || u.username || 'Unknown',
+    username: u.username || '',
     avatar: u.avatarUrl || `https://picsum.photos/seed/${u.id}/100/100`,
     cover: `https://picsum.photos/seed/cover${u.id}/1200/400`,
     bio: '',
@@ -83,10 +84,12 @@ const SuggestedUser = ({ user, onUserClick }: SuggestedUserProps) => {
   );
 };
 
-const RightSidebar = ({ onUserClick }: { onUserClick: (u: UserProfile) => void }) => {
+const RightSidebar = ({ onUserClick, onHashtagClick }: { onUserClick: (u: UserProfile) => void; onHashtagClick?: (tag: string) => void }) => {
   const api = getSocialNetworkApiV1();
   const [suggestions, setSuggestions] = useState<UserSummaryDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [trending, setTrending] = useState<TrendingHashtagDto[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(true);
 
   useEffect(() => {
     api.getApiUsersSuggestions()
@@ -95,6 +98,13 @@ const RightSidebar = ({ onUserClick }: { onUserClick: (u: UserProfile) => void }
       })
       .catch(() => { /* ẩn lỗi nếu chưa login */ })
       .finally(() => setLoading(false));
+
+    api.getApiPostsTrendingHashtags({ limit: 10 })
+      .then(res => {
+        if (res.success && res.data) setTrending(res.data);
+      })
+      .catch(() => {})
+      .finally(() => setTrendingLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
@@ -121,16 +131,35 @@ const RightSidebar = ({ onUserClick }: { onUserClick: (u: UserProfile) => void }
         </div>
       </div>
 
-      {/* Trending (static cho đến khi có API trends) */}
+      {/* Trending hashtags */}
       <div className="bg-surface-container-lowest p-6 rounded-xl surface-elevation-tonal">
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-headline font-bold text-on-surface">Xu hướng</h3>
           <TrendingUp className="w-5 h-5 text-outline" />
         </div>
-        <div className="flex flex-col gap-6">
-          <TrendingTopic category="Công nghệ • Trending" title="AI Agent trong phát triển phần mềm 2026" meta="12.5k bài" />
-          <TrendingTopic category="Thiết kế • Phổ biến" title="TailwindCSS v4 — những thay đổi lớn" meta="8.2k bài" />
-          <TrendingTopic category="Lập trình • Trending" title=".NET 10 — performance improvements" meta="6.7k bài" />
+        <div className="flex flex-col gap-4">
+          {trendingLoading && (
+            <div className="flex justify-center py-4">
+              <Loader className="w-5 h-5 animate-spin text-primary" />
+            </div>
+          )}
+          {!trendingLoading && trending.length === 0 && (
+            <p className="text-xs text-outline text-center py-2">Chưa có xu hướng nào.</p>
+          )}
+          {trending.map((t, i) => (
+            <button
+              key={t.tag}
+              onClick={() => onHashtagClick?.(t.tag ?? '')}
+              className="text-left group"
+            >
+              <p className="text-[10px] uppercase tracking-wider text-outline font-bold mb-0.5">#{i + 1} Trending</p>
+              <div className="flex items-center gap-1.5">
+                <Hash className="w-3.5 h-3.5 text-primary" />
+                <h4 className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">{t.tag ?? ''}</h4>
+              </div>
+              <p className="text-xs text-outline mt-0.5">{(t.postCount ?? 0).toLocaleString()} bài viết</p>
+            </button>
+          ))}
         </div>
       </div>
 

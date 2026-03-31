@@ -1,0 +1,63 @@
+# ═══════════════════════════════════════════
+#  Social Network — Root .gitignore
+# ═══════════════════════════════════════════
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# ── IDEs ──
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.ntvs_analysis.dat
+.ntvs_test_adapter_config
+
+# ── .NET / Backend ──
+backend/**/bin/
+backend/**/obj/
+*.dll
+*.exe
+*.pdb
+*.nupkg
+project.lock.json
+*.nuget.props
+*.nuget.targets
+
+# ── User Secrets (đã dùng dotnet user-secrets, nhưng phòng hờ) ──
+appsettings.*.local.json
+
+# ── Node / Frontend ──
+node_modules/
+dist/
+.cache/
+*.tsbuildinfo
+
+# ── Environment ──
+.env
+.env.*
+!.env.example
+
+# ── Uploads (generated at runtime) ──
+backend/**/wwwroot/uploads/
+backend/**/wwwroot/videos/
+
+# ── Build outputs ──
+frontend/SocialNetwork.Api.json
+
+# ── Docker ──
+docker-compose.override.yml
+
+# ── Misc ──
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

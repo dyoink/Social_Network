@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Loader, ChevronLeft, ChevronRight, Clock, Trash2 } from 'lucide-react';
+import { CheckCircle2, Loader, ChevronLeft, ChevronRight, Clock, Trash2, AlertTriangle } from 'lucide-react';
 import { getSocialNetworkApiV1, type ReportDto } from '../../../api/api-generated';
 import { timeAgo } from '../../../utils/time';
 import toast from 'react-hot-toast';
@@ -57,6 +57,18 @@ const AdminReportsView = () => {
       setTotal(t => t - 1);
       toast.success('Đã xóa báo cáo');
     } catch { toast.error('Xóa thất bại'); } finally { setActionId(null); }
+  };
+
+  const handleDeletePost = async (report: ReportDto) => {
+    if (!report.targetPostId) return;
+    if (!confirm(`Xóa bài viết #${report.targetPostId} vi phạm và đánh dấu báo cáo đã xử lý?`)) return;
+    setActionId(Number(report.id!));
+    try {
+      await api.deleteApiAdminPostsId(report.targetPostId);
+      await api.putApiAdminReportsIdResolve(report.id!);
+      setReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'Resolved', resolvedAt: new Date().toISOString() } : r));
+      toast.success('Đã xóa bài viết vi phạm và xử lý báo cáo.');
+    } catch { toast.error('Thao tác thất bại.'); } finally { setActionId(null); }
   };
 
   const totalPages = Math.ceil(total / pageSize);
@@ -145,12 +157,23 @@ const AdminReportsView = () => {
                           actionId === report.id ? (
                             <Loader className="w-4 h-4 animate-spin text-outline" />
                           ) : (
-                            <button
-                              onClick={() => handleResolve(report)}
-                              className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                            >
-                              Đánh dấu đã xử lý
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleResolve(report)}
+                                className="px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                              >
+                                Đánh dấu đã xử lý
+                              </button>
+                              {report.targetPostId && (
+                                <button
+                                  onClick={() => handleDeletePost(report)}
+                                  className="px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center gap-1"
+                                  title="Xóa bài viết vi phạm"
+                                >
+                                  <AlertTriangle className="w-3 h-3" /> Xóa bài
+                                </button>
+                              )}
+                            </>
                           )
                         )}
                         {actionId !== report.id && (

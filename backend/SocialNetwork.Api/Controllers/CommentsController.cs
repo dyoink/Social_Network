@@ -20,8 +20,8 @@ namespace SocialNetwork.Api.Controllers
 
         private int? CurrentUserId =>
             User.Identity?.IsAuthenticated == true
-                ? int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!)
-                : null;
+                && int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
+                ? id : null;
 
         // ─── GET /api/comments/post/{postId} ───────────────────────────────────
 
@@ -59,7 +59,7 @@ namespace SocialNetwork.Api.Controllers
         [ProducesResponseType<ApiResponse<CommentDto>>(201)]
         public async Task<IActionResult> Create([FromBody] CreateCommentDto dto)
         {
-            var created = await _commentService.CreateAsync(CurrentUserId!.Value, dto);
+            var created = await _commentService.CreateAsync(CurrentUserId.GetValueOrDefault(), dto);
             return CreatedAtAction(
                 nameof(GetByPost),
                 new { postId = created.PostId },
@@ -73,7 +73,7 @@ namespace SocialNetwork.Api.Controllers
         [Authorize]
         public async Task<IActionResult> Delete(int id)
         {
-            await _commentService.DeleteAsync(id, CurrentUserId!.Value);
+            await _commentService.DeleteAsync(id, CurrentUserId.GetValueOrDefault());
             return Ok(ApiResponse.Ok("Đã xóa bình luận."));
         }
     }

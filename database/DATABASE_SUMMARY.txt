@@ -2,7 +2,7 @@ DATABASE SCHEMA - SOCIAL NETWORK APP
 Database: PostgreSQL | ORM: Entity Framework Core
 
 ==================================================
-DANH SÁCH BẢNG (10 bảng)
+DANH SÁCH BẢNG (16 bảng)
 ==================================================
 
 1. users
@@ -14,11 +14,14 @@ DANH SÁCH BẢNG (10 bảng)
      password_hash TEXT         NOT NULL          -- BCrypt hash
      full_name     VARCHAR(100)
      date_of_birth DATE
+     hometown      VARCHAR(100)
+     gender        VARCHAR(20)          -- 'Male' | 'Female' | 'Other'
      avatar_url    TEXT
      cover_url     TEXT
      bio           TEXT
      role          VARCHAR(50)  DEFAULT 'Member'  -- 'Member' | 'Admin'
      is_active     BOOLEAN      DEFAULT TRUE       -- FALSE = bị ban bởi Admin
+     is_seeded     BOOLEAN      DEFAULT FALSE      -- TRUE = tạo bởi Admin Seed tool
      created_at    TIMESTAMPTZ  DEFAULT NOW()
      updated_at    TIMESTAMPTZ  DEFAULT NOW()
    Relations:
@@ -34,6 +37,7 @@ DANH SÁCH BẢNG (10 bảng)
      user_id    INTEGER FK -> users(id) ON DELETE CASCADE
      content    TEXT    NOT NULL
      image_url  TEXT
+     visibility VARCHAR(20) DEFAULT 'Public'  -- 'Public' | 'FollowersOnly' | 'Private'
      created_at TIMESTAMPTZ DEFAULT NOW()
      updated_at TIMESTAMPTZ DEFAULT NOW()
    Relations:
@@ -58,6 +62,7 @@ DANH SÁCH BẢNG (10 bảng)
    Columns:
      user_id    INTEGER FK -> users(id) ON DELETE CASCADE
      post_id    INTEGER FK -> posts(id) ON DELETE CASCADE
+     reaction_type VARCHAR(10) DEFAULT 'Like'  -- 'Like'|'Love'|'Wow'|'Angry'|'Sad'
      created_at TIMESTAMPTZ DEFAULT NOW()
      PRIMARY KEY (user_id, post_id)
    Relations:
@@ -131,6 +136,70 @@ DANH SÁCH BẢNG (10 bảng)
    Relations:
      N-1 -> users (reporter_id), nullable -> users (target_user_id), nullable -> posts (target_post_id)
 
+11. post_hashtags
+   Hashtags được parse từ nội dung bài viết.
+   Columns:
+     post_id  INTEGER FK -> posts(id) ON DELETE CASCADE
+     tag      VARCHAR(100) NOT NULL
+     PRIMARY KEY (post_id, tag)
+   Relations:
+     N-N giữa posts và tags
+   Indexes:
+     idx_post_hashtags_tag ON post_hashtags(tag)
+
+12. badges
+   Danh hiệu gamification (tự động + thủ công).
+   Columns:
+     id              SERIAL PK
+     name            VARCHAR(100) NOT NULL
+     description     VARCHAR(500)
+     icon            VARCHAR(200) DEFAULT '🏆'      -- emoji hoặc URL
+     color           VARCHAR(10)  DEFAULT '#f59e0b' -- hex color
+     condition_type  VARCHAR(30)  NOT NULL           -- 'PostCount'|'LikesReceived'|'CommentsCount'|'FollowersCount'|'DaysActive'|'PokesSent'|'Manual'
+     condition_value INTEGER                         -- giá trị cần đạt, NULL nếu Manual
+     is_manual_only  BOOLEAN      DEFAULT FALSE      -- true = chỉ admin cấp
+     created_at      TIMESTAMPTZ  DEFAULT NOW()
+   Seed data: 13 badges mặc định
+
+13. user_badges
+   Bảng trung gian: user nào nhận badge nào.
+   Columns:
+     user_id     INTEGER FK -> users(id)  ON DELETE CASCADE
+     badge_id    INTEGER FK -> badges(id) ON DELETE CASCADE
+     earned_at   TIMESTAMPTZ DEFAULT NOW()
+     is_displayed BOOLEAN    DEFAULT FALSE  -- chỉ 1 badge được hiển thị
+     PRIMARY KEY (user_id, badge_id)
+   Relations:
+     N-N giữa users và badges
+
+14. stories
+   Story 24h giống Instagram.
+   Columns:
+     id          SERIAL PK
+     user_id     INTEGER FK -> users(id) ON DELETE CASCADE
+     media_url   TEXT NOT NULL
+     media_type  VARCHAR(10) DEFAULT 'Image'  -- 'Image' | 'Video'
+     caption     TEXT
+     created_at  TIMESTAMPTZ DEFAULT NOW()
+     expires_at  TIMESTAMPTZ DEFAULT NOW() + 24h
+   Relations:
+     N-1 -> users
+     1-N -> story_views
+   Indexes:
+     idx_stories_expires_at ON stories(expires_at)
+
+15. story_views
+   Bảng trung gian: ai đã xem story nào.
+   Columns:
+     story_id   INTEGER FK -> stories(id) ON DELETE CASCADE
+     user_id    INTEGER FK -> users(id)   ON DELETE CASCADE
+     viewed_at  TIMESTAMPTZ DEFAULT NOW()
+     PRIMARY KEY (story_id, user_id)
+   Relations:
+     N-N giữa stories và users
+
+NOTE: posts table now has video_url column (nullable TEXT) for Reels support.
+
 ==================================================
 INDEXES
 ==================================================
@@ -147,6 +216,8 @@ INDEXES
 
   idx_reports_status      ON reports(status)
   idx_reports_reporter_id ON reports(reporter_id)
+
+  idx_stories_expires_at ON stories(expires_at)
 
 ==================================================
 SƠ ĐỒ QUAN HỆ (ERD tóm tắt)

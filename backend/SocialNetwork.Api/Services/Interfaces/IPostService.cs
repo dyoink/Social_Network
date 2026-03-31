@@ -35,14 +35,23 @@ namespace SocialNetwork.Api.Services.Interfaces
         Task DeleteAsync(int postId, int currentUserId);
 
         /// <summary>
-        /// Toggle like/unlike. Tự động tạo/xóa Notification 'like'.
-        /// Trả về trạng thái mới sau khi toggle.
+        /// Toggle reaction. Nếu cùng loại → unlike, khác loại → đổi reaction.
+        /// Tự động tạo/xóa Notification 'like'.
         /// </summary>
-        Task<LikeResultDto> ToggleLikeAsync(int postId, int currentUserId);
+        Task<LikeResultDto> ToggleLikeAsync(int postId, int currentUserId, string reactionType = "Like");
 
         /// <summary>
         /// Tìm kiếm bài viết theo nội dung (full-text, case-insensitive).
         /// </summary>
         Task<PagedResult<PostDto>> SearchPostsAsync(string query, int? currentUserId, int page, int pageSize);
+
+        /// <summary>Lấy posts theo hashtag.</summary>
+        Task<PagedResult<PostDto>> GetByHashtagAsync(string tag, int? currentUserId, int page, int pageSize);
+
+        /// <summary>Top trending hashtags trong 24h.</summary>
+        Task<List<TrendingHashtagDto>> GetTrendingHashtagsAsync(int limit = 10);
+
+        /// <summary>Lấy batch Reels ngẫu nhiên (posts có video).</summary>
+        Task<List<PostDto>> GetReelsAsync(int? currentUserId, int count = 10);
     }
 }

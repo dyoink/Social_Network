@@ -109,6 +109,18 @@ export interface ApiResponseOfAdminStatsDto {
   data?: null | AdminStatsDto;
 }
 
+export interface UserBadgeDto {
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  badgeId?: number | string;
+  name?: string;
+  /** @nullable */
+  description?: string | null;
+  icon?: string;
+  color?: string;
+  earnedAt?: string;
+  isDisplayed?: boolean;
+}
+
 export interface UserDto {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   id?: number | string;
@@ -118,6 +130,10 @@ export interface UserDto {
   fullName?: string | null;
   /** @nullable */
   dateOfBirth?: string | null;
+  /** @nullable */
+  hometown?: string | null;
+  /** @nullable */
+  gender?: string | null;
   /** @nullable */
   avatarUrl?: string | null;
   /** @nullable */
@@ -133,6 +149,7 @@ export interface UserDto {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   postsCount?: number | string;
   isFollowing?: boolean;
+  displayedBadge?: null | UserBadgeDto;
 }
 
 export interface AuthResponseDto {
@@ -147,6 +164,32 @@ export interface ApiResponseOfAuthResponseDto {
   data?: null | AuthResponseDto;
 }
 
+export interface BadgeDto {
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  id?: number | string;
+  name?: string;
+  /** @nullable */
+  description?: string | null;
+  icon?: string;
+  color?: string;
+  conditionType?: string;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  conditionValue?: number | string | null;
+  isManualOnly?: boolean;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  usersCount?: number | string;
+}
+
+export interface ApiResponseOfBadgeDto {
+  success?: boolean;
+  /** @nullable */
+  message?: string | null;
+  data?: null | BadgeDto;
+}
+
 export interface UserSummaryDto {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   id?: number | string;
@@ -155,6 +198,7 @@ export interface UserSummaryDto {
   fullName?: string | null;
   /** @nullable */
   avatarUrl?: string | null;
+  displayedBadge?: null | UserBadgeDto;
 }
 
 export interface CommentDto {
@@ -242,10 +286,15 @@ export interface ApiResponseOfGrowthChartDto {
   data?: null | GrowthChartDto;
 }
 
+export type LikeResultDtoReactionCounts = {[key: string]: number | string};
+
 export interface LikeResultDto {
   isLiked?: boolean;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   likesCount?: number | string;
+  /** @nullable */
+  reactionType?: string | null;
+  reactionCounts?: LikeResultDtoReactionCounts;
 }
 
 export interface ApiResponseOfLikeResultDto {
@@ -255,12 +304,68 @@ export interface ApiResponseOfLikeResultDto {
   data?: null | LikeResultDto;
 }
 
+export interface ApiResponseOfListOfBadgeDto {
+  success?: boolean;
+  /** @nullable */
+  message?: string | null;
+  /** @nullable */
+  data?: BadgeDto[] | null;
+}
+
+export interface BadgeProgressDto {
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  badgeId?: number | string;
+  name?: string;
+  /** @nullable */
+  description?: string | null;
+  icon?: string;
+  color?: string;
+  conditionType?: string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  conditionValue?: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  currentValue?: number | string;
+  isEarned?: boolean;
+  /** @nullable */
+  earnedAt?: string | null;
+}
+
+export interface ApiResponseOfListOfBadgeProgressDto {
+  success?: boolean;
+  /** @nullable */
+  message?: string | null;
+  /** @nullable */
+  data?: BadgeProgressDto[] | null;
+}
+
 export interface ApiResponseOfListOfCommentDto {
   success?: boolean;
   /** @nullable */
   message?: string | null;
   /** @nullable */
   data?: CommentDto[] | null;
+}
+
+export interface TrendingHashtagDto {
+  tag?: string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  postCount?: number | string;
+}
+
+export interface ApiResponseOfListOfTrendingHashtagDto {
+  success?: boolean;
+  /** @nullable */
+  message?: string | null;
+  /** @nullable */
+  data?: TrendingHashtagDto[] | null;
+}
+
+export interface ApiResponseOfListOfUserBadgeDto {
+  success?: boolean;
+  /** @nullable */
+  message?: string | null;
+  /** @nullable */
+  data?: UserBadgeDto[] | null;
 }
 
 export interface ApiResponseOfListOfUserSummaryDto {
@@ -418,6 +523,8 @@ export interface ApiResponseOfPagedResultOfNotificationDto {
   data?: null | PagedResultOfNotificationDto;
 }
 
+export type PostDtoReactionCounts = {[key: string]: number | string};
+
 export interface PostDto {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   id?: number | string;
@@ -427,11 +534,16 @@ export interface PostDto {
   imageUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  visibility?: string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   likesCount?: number | string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   commentsCount?: number | string;
   isLiked?: boolean;
+  /** @nullable */
+  myReaction?: string | null;
+  reactionCounts?: PostDtoReactionCounts;
+  hashtags?: string[];
 }
 
 export interface PagedResultOfPostDto {
@@ -573,6 +685,41 @@ export interface ChangeRoleDto {
   role: string;
 }
 
+export interface CreateBadgeDto {
+  /**
+     * @minLength 0
+     * @maxLength 100
+     */
+  name: string;
+  /**
+     * @minLength 0
+     * @maxLength 500
+     * @nullable
+     */
+  description?: string | null;
+  /**
+     * @minLength 0
+     * @maxLength 200
+     */
+  icon?: string;
+  /**
+     * @minLength 0
+     * @maxLength 10
+     */
+  color?: string;
+  /**
+     * @minLength 0
+     * @maxLength 30
+     */
+  conditionType: string;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  conditionValue?: number | string | null;
+  isManualOnly?: boolean;
+}
+
 export interface CreateCommentDto {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   postId?: number | string;
@@ -602,6 +749,7 @@ export interface CreatePostDto {
   content: string;
   /** @nullable */
   imageUrl?: string | null;
+  visibility?: string;
 }
 
 export interface CreateReportDto {
@@ -628,11 +776,13 @@ export interface CreateReportDto {
   detail?: string | null;
 }
 
-export type IFormFile = Blob;
-
 export interface LoginDto {
   emailOrUsername: string;
   password: string;
+}
+
+export interface ReactDto {
+  reactionType?: string;
 }
 
 export interface RegisterDto {
@@ -661,9 +811,57 @@ export interface RegisterDto {
   dateOfBirth?: string | null;
 }
 
+export interface SetDisplayBadgeDto {
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  badgeId?: number | string | null;
+}
+
 export interface StartConversationDto {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   targetUserId: number | string;
+}
+
+export interface UpdateBadgeDto {
+  /**
+     * @minLength 0
+     * @maxLength 100
+     * @nullable
+     */
+  name?: string | null;
+  /**
+     * @minLength 0
+     * @maxLength 500
+     * @nullable
+     */
+  description?: string | null;
+  /**
+     * @minLength 0
+     * @maxLength 200
+     * @nullable
+     */
+  icon?: string | null;
+  /**
+     * @minLength 0
+     * @maxLength 10
+     * @nullable
+     */
+  color?: string | null;
+  /**
+     * @minLength 0
+     * @maxLength 30
+     * @nullable
+     */
+  conditionType?: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  conditionValue?: number | string | null;
+  /** @nullable */
+  isManualOnly?: boolean | null;
 }
 
 export interface UpdatePostDto {
@@ -674,6 +872,8 @@ export interface UpdatePostDto {
   content: string;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  visibility?: string | null;
 }
 
 export interface UpdateUserDto {
@@ -687,6 +887,10 @@ export interface UpdateUserDto {
   coverUrl?: string | null;
   /** @nullable */
   dateOfBirth?: string | null;
+  /** @nullable */
+  hometown?: string | null;
+  /** @nullable */
+  gender?: string | null;
 }
 
 export type GetApiAdminGrowthChartParams = {
@@ -820,6 +1024,24 @@ page?: number | string;
 pageSize?: number | string;
 };
 
+export type GetApiPostsHashtagTagParams = {
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+page?: number | string;
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+pageSize?: number | string;
+};
+
+export type GetApiPostsTrendingHashtagsParams = {
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+limit?: number | string;
+};
+
 export type GetApiPostsSearchParams = {
 q?: string;
 /**
@@ -832,8 +1054,16 @@ page?: number | string;
 pageSize?: number | string;
 };
 
+export type PostApiUploadImageBodyHeaders = {[key: string]: string[]};
+
 export type PostApiUploadImageBody = {
-  file?: IFormFile;
+  ContentType?: string;
+  ContentDisposition?: string;
+  Headers?: PostApiUploadImageBodyHeaders;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  Length?: number | string;
+  Name?: string;
+  FileName?: string;
 };
 
 export type GetApiUsersIdFollowersParams = {
@@ -1002,6 +1232,67 @@ const deleteApiAdminReportsId = (
       );
     }
 
+const getApiAdminBadges = (
+
+ ) => {
+      return customMutator<ApiResponseOfListOfBadgeDto>(
+      {url: `/api/Admin/badges`, method: 'GET'
+    },
+      );
+    }
+
+const postApiAdminBadges = (
+    createBadgeDto: CreateBadgeDto,
+ ) => {
+      return customMutator<ApiResponseOfBadgeDto>(
+      {url: `/api/Admin/badges`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createBadgeDto
+    },
+      );
+    }
+
+const putApiAdminBadgesId = (
+    id: number | string,
+    updateBadgeDto: UpdateBadgeDto,
+ ) => {
+      return customMutator<ApiResponseOfBadgeDto>(
+      {url: `/api/Admin/badges/${id}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: updateBadgeDto
+    },
+      );
+    }
+
+const deleteApiAdminBadgesId = (
+    id: number | string,
+ ) => {
+      return customMutator<ApiResponse>(
+      {url: `/api/Admin/badges/${id}`, method: 'DELETE'
+    },
+      );
+    }
+
+const postApiAdminUsersUserIdBadgesBadgeId = (
+    userId: number | string,
+    badgeId: number | string,
+ ) => {
+      return customMutator<ApiResponse>(
+      {url: `/api/Admin/users/${userId}/badges/${badgeId}`, method: 'POST'
+    },
+      );
+    }
+
+const deleteApiAdminUsersUserIdBadgesBadgeId = (
+    userId: number | string,
+    badgeId: number | string,
+ ) => {
+      return customMutator<ApiResponse>(
+      {url: `/api/Admin/users/${userId}/badges/${badgeId}`, method: 'DELETE'
+    },
+      );
+    }
+
 const postApiAuthRegister = (
     registerDto: RegisterDto,
  ) => {
@@ -1029,6 +1320,44 @@ const getApiAuthMe = (
  ) => {
       return customMutator<ApiResponseOfUserDto>(
       {url: `/api/Auth/me`, method: 'GET'
+    },
+      );
+    }
+
+const getApiBadges = (
+
+ ) => {
+      return customMutator<ApiResponseOfListOfBadgeDto>(
+      {url: `/api/Badges`, method: 'GET'
+    },
+      );
+    }
+
+const getApiBadgesUserUserId = (
+    userId: number | string,
+ ) => {
+      return customMutator<ApiResponseOfListOfUserBadgeDto>(
+      {url: `/api/Badges/user/${userId}`, method: 'GET'
+    },
+      );
+    }
+
+const getApiBadgesProgress = (
+
+ ) => {
+      return customMutator<ApiResponseOfListOfBadgeProgressDto>(
+      {url: `/api/Badges/progress`, method: 'GET'
+    },
+      );
+    }
+
+const putApiBadgesDisplay = (
+    setDisplayBadgeDto: SetDisplayBadgeDto,
+ ) => {
+      return customMutator<ApiResponse>(
+      {url: `/api/Badges/display`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: setDisplayBadgeDto
     },
       );
     }
@@ -1135,6 +1464,24 @@ const getApiConversationsUnreadCount = (
       );
     }
 
+const getApiMetrics = (
+
+ ) => {
+      return customMutator<void>(
+      {url: `/api/Metrics`, method: 'GET'
+    },
+      );
+    }
+
+const getApiMetricsServer = (
+
+ ) => {
+      return customMutator<void>(
+      {url: `/api/Metrics/server`, method: 'GET'
+    },
+      );
+    }
+
 const getApiNotifications = (
     params?: GetApiNotificationsParams,
  ) => {
@@ -1236,9 +1583,33 @@ const postApiPosts = (
 
 const postApiPostsIdLike = (
     id: number,
+    nullReactDto: null | ReactDto,
  ) => {
       return customMutator<ApiResponseOfLikeResultDto>(
-      {url: `/api/Posts/${id}/like`, method: 'POST'
+      {url: `/api/Posts/${id}/like`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: nullReactDto
+    },
+      );
+    }
+
+const getApiPostsHashtagTag = (
+    tag: string,
+    params?: GetApiPostsHashtagTagParams,
+ ) => {
+      return customMutator<ApiResponseOfPagedResultOfPostDto>(
+      {url: `/api/Posts/hashtag/${tag}`, method: 'GET',
+        params
+    },
+      );
+    }
+
+const getApiPostsTrendingHashtags = (
+    params?: GetApiPostsTrendingHashtagsParams,
+ ) => {
+      return customMutator<ApiResponseOfListOfTrendingHashtagDto>(
+      {url: `/api/Posts/trending-hashtags`, method: 'GET',
+        params
     },
       );
     }
@@ -1266,14 +1637,30 @@ const postApiReports = (
 
 const postApiUploadImage = (
     postApiUploadImageBody: PostApiUploadImageBody,
- ) => {const formData = new FormData();
-if(postApiUploadImageBody.file !== undefined) {
- formData.append(`file`, postApiUploadImageBody.file);
+ ) => {const formUrlEncoded = new URLSearchParams();
+if(postApiUploadImageBody.ContentType !== undefined) {
+ formUrlEncoded.append(`ContentType`, postApiUploadImageBody.ContentType);
+ }
+if(postApiUploadImageBody.ContentDisposition !== undefined) {
+ formUrlEncoded.append(`ContentDisposition`, postApiUploadImageBody.ContentDisposition);
+ }
+if(postApiUploadImageBody.Headers !== undefined) {
+ formUrlEncoded.append(`Headers`, JSON.stringify(postApiUploadImageBody.Headers));
+ }
+if(postApiUploadImageBody.Length !== undefined) {
+ formUrlEncoded.append(`Length`, postApiUploadImageBody.Length.toString())
+ }
+if(postApiUploadImageBody.Name !== undefined) {
+ formUrlEncoded.append(`Name`, postApiUploadImageBody.Name);
+ }
+if(postApiUploadImageBody.FileName !== undefined) {
+ formUrlEncoded.append(`FileName`, postApiUploadImageBody.FileName);
  }
 
       return customMutator<ApiResponseOfUploadResultDto>(
       {url: `/api/Upload/image`, method: 'POST',
-       data: formData
+      headers: {'Content-Type': 'application/x-www-form-urlencoded', },
+       data: formUrlEncoded
     },
       );
     }
@@ -1359,7 +1746,7 @@ const putApiUsersMePassword = (
       );
     }
 
-return {getApiAdminStats,getApiAdminGrowthChart,getApiAdminUsers,putApiAdminUsersIdBan,putApiAdminUsersIdRole,putApiAdminUsersIdResetPassword,deleteApiAdminUsersId,getApiAdminPosts,deleteApiAdminPostsId,getApiAdminComments,deleteApiAdminCommentsId,getApiAdminReports,putApiAdminReportsIdResolve,deleteApiAdminReportsId,postApiAuthRegister,postApiAuthLogin,getApiAuthMe,getApiCommentsPostPostId,getApiCommentsCommentIdReplies,postApiComments,deleteApiCommentsId,getApiConversations,postApiConversations,getApiConversationsIdMessages,postApiConversationsIdMessages,putApiConversationsIdRead,getApiConversationsUnreadCount,getApiNotifications,putApiNotificationsIdRead,putApiNotificationsReadAll,getApiNotificationsUnreadCount,getApiPostsFeed,getApiPostsUserUserId,getApiPostsId,putApiPostsId,deleteApiPostsId,postApiPosts,postApiPostsIdLike,getApiPostsSearch,postApiReports,postApiUploadImage,getApiUsersUsername,putApiUsersMe,postApiUsersIdFollow,getApiUsersIdFollowers,getApiUsersIdFollowing,getApiUsersSearch,getApiUsersSuggestions,putApiUsersMePassword}};
+return {getApiAdminStats,getApiAdminGrowthChart,getApiAdminUsers,putApiAdminUsersIdBan,putApiAdminUsersIdRole,putApiAdminUsersIdResetPassword,deleteApiAdminUsersId,getApiAdminPosts,deleteApiAdminPostsId,getApiAdminComments,deleteApiAdminCommentsId,getApiAdminReports,putApiAdminReportsIdResolve,deleteApiAdminReportsId,getApiAdminBadges,postApiAdminBadges,putApiAdminBadgesId,deleteApiAdminBadgesId,postApiAdminUsersUserIdBadgesBadgeId,deleteApiAdminUsersUserIdBadgesBadgeId,postApiAuthRegister,postApiAuthLogin,getApiAuthMe,getApiBadges,getApiBadgesUserUserId,getApiBadgesProgress,putApiBadgesDisplay,getApiCommentsPostPostId,getApiCommentsCommentIdReplies,postApiComments,deleteApiCommentsId,getApiConversations,postApiConversations,getApiConversationsIdMessages,postApiConversationsIdMessages,putApiConversationsIdRead,getApiConversationsUnreadCount,getApiMetrics,getApiMetricsServer,getApiNotifications,putApiNotificationsIdRead,putApiNotificationsReadAll,getApiNotificationsUnreadCount,getApiPostsFeed,getApiPostsUserUserId,getApiPostsId,putApiPostsId,deleteApiPostsId,postApiPosts,postApiPostsIdLike,getApiPostsHashtagTag,getApiPostsTrendingHashtags,getApiPostsSearch,postApiReports,postApiUploadImage,getApiUsersUsername,putApiUsersMe,postApiUsersIdFollow,getApiUsersIdFollowers,getApiUsersIdFollowing,getApiUsersSearch,getApiUsersSuggestions,putApiUsersMePassword}};
 export type GetApiAdminStatsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAdminStats']>>>
 export type GetApiAdminGrowthChartResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAdminGrowthChart']>>>
 export type GetApiAdminUsersResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAdminUsers']>>>
@@ -1374,9 +1761,19 @@ export type DeleteApiAdminCommentsIdResult = NonNullable<Awaited<ReturnType<Retu
 export type GetApiAdminReportsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAdminReports']>>>
 export type PutApiAdminReportsIdResolveResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['putApiAdminReportsIdResolve']>>>
 export type DeleteApiAdminReportsIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['deleteApiAdminReportsId']>>>
+export type GetApiAdminBadgesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAdminBadges']>>>
+export type PostApiAdminBadgesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiAdminBadges']>>>
+export type PutApiAdminBadgesIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['putApiAdminBadgesId']>>>
+export type DeleteApiAdminBadgesIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['deleteApiAdminBadgesId']>>>
+export type PostApiAdminUsersUserIdBadgesBadgeIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiAdminUsersUserIdBadgesBadgeId']>>>
+export type DeleteApiAdminUsersUserIdBadgesBadgeIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['deleteApiAdminUsersUserIdBadgesBadgeId']>>>
 export type PostApiAuthRegisterResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiAuthRegister']>>>
 export type PostApiAuthLoginResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiAuthLogin']>>>
 export type GetApiAuthMeResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiAuthMe']>>>
+export type GetApiBadgesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiBadges']>>>
+export type GetApiBadgesUserUserIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiBadgesUserUserId']>>>
+export type GetApiBadgesProgressResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiBadgesProgress']>>>
+export type PutApiBadgesDisplayResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['putApiBadgesDisplay']>>>
 export type GetApiCommentsPostPostIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiCommentsPostPostId']>>>
 export type GetApiCommentsCommentIdRepliesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiCommentsCommentIdReplies']>>>
 export type PostApiCommentsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiComments']>>>
@@ -1387,6 +1784,8 @@ export type GetApiConversationsIdMessagesResult = NonNullable<Awaited<ReturnType
 export type PostApiConversationsIdMessagesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiConversationsIdMessages']>>>
 export type PutApiConversationsIdReadResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['putApiConversationsIdRead']>>>
 export type GetApiConversationsUnreadCountResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiConversationsUnreadCount']>>>
+export type GetApiMetricsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiMetrics']>>>
+export type GetApiMetricsServerResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiMetricsServer']>>>
 export type GetApiNotificationsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiNotifications']>>>
 export type PutApiNotificationsIdReadResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['putApiNotificationsIdRead']>>>
 export type PutApiNotificationsReadAllResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['putApiNotificationsReadAll']>>>
@@ -1398,6 +1797,8 @@ export type PutApiPostsIdResult = NonNullable<Awaited<ReturnType<ReturnType<type
 export type DeleteApiPostsIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['deleteApiPostsId']>>>
 export type PostApiPostsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiPosts']>>>
 export type PostApiPostsIdLikeResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiPostsIdLike']>>>
+export type GetApiPostsHashtagTagResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiPostsHashtagTag']>>>
+export type GetApiPostsTrendingHashtagsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiPostsTrendingHashtags']>>>
 export type GetApiPostsSearchResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['getApiPostsSearch']>>>
 export type PostApiReportsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiReports']>>>
 export type PostApiUploadImageResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getSocialNetworkApiV1>['postApiUploadImage']>>>

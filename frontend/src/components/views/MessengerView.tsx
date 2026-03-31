@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Plus, ArrowRight, Loader, AlertCircle, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ArrowRight, Loader, AlertCircle, MessageSquare } from 'lucide-react';
 import { getSocialNetworkApiV1, type ConversationDto, type MessageDto } from '../../api/api-generated';
+import { getChatConnection } from '../../api/signalr';
 import useAuthStore from '../../store/authStore';
 import { timeAgo } from '../../utils/time';
 
@@ -10,23 +11,30 @@ interface ConversationItemProps {
   conv: ConversationDto;
   active: boolean;
   currentUserId: number;
+  onlineUserIds: Set<number>;
   onClick: () => void;
 }
 
-const ConversationItem = ({ conv, active, currentUserId, onClick }: ConversationItemProps) => {
+const ConversationItem = ({ conv, active, currentUserId, onlineUserIds, onClick }: ConversationItemProps) => {
   const other  = conv.participants?.[0];
   const name   = other?.fullName || other?.username || 'Unknown';
   const avatar = other?.avatarUrl || `https://picsum.photos/seed/${other?.id}/50/50`;
   const lastMsg = conv.lastMessage?.content ? conv.lastMessage.content.slice(0, 40) + (conv.lastMessage.content.length > 40 ? '…' : '') : 'Bắt đầu cuộc trò chuyện';
   const isMine      = conv.lastMessage?.senderId === currentUserId;
   const unreadCount  = Number(conv.unreadCount ?? 0);
+  const isOnline = other?.id ? onlineUserIds.has(Number(other.id)) : false;
 
   return (
     <div
       className={`p-4 rounded-xl flex gap-4 cursor-pointer transition-all ${active ? 'bg-surface-container-lowest shadow-sm border-l-4 border-primary' : 'hover:bg-surface-container-lowest'}`}
       onClick={onClick}
     >
-      <img alt={name} className="w-12 h-12 rounded-full object-cover flex-shrink-0" src={avatar} referrerPolicy="no-referrer" />
+      <div className="relative flex-shrink-0">
+        <img alt={name} className="w-12 h-12 rounded-full object-cover" src={avatar} referrerPolicy="no-referrer" />
+        {isOnline && (
+          <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-surface rounded-full" />
+        )}
+      </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-baseline">
           <h4 className={`font-bold truncate ${active ? 'text-on-surface' : 'text-on-surface hover:text-primary'}`}>{name}</h4>
@@ -80,8 +88,87 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
 
   const [newMessage,      setNewMessage]      = useState('');
   const [sending,         setSending]         = useState(false);
+  const [typingUser,      setTypingUser]      = useState<number | null>(null);
+  const [onlineUserIds,   setOnlineUserIds]   = useState<Set<number>>(new Set());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevConvRef = useRef<number | null>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // SignalR connection
+  const chatConn = getChatConnection();
+
+  // ─── SignalR event listeners ───────────────────────────────────────────────
+  const onReceiveMessage = useCallback((msg: MessageDto) => {
+    // Chỉ append nếu tin nhắn thuộc conversation đang mở
+    setMessages(prev => {
+      // Tránh duplicate (nếu gửi từ chính mình qua REST đã append)
+      if (prev.some(m => m.id === msg.id)) return prev;
+      return [...prev, msg];
+    });
+    // Cập nhật last message trong sidebar
+    setConversations(prev =>
+      prev.map(c => Number(c.id) === msg.conversationId
+        ? { ...c, lastMessage: msg }
+        : c
+      )
+    );
+    setTypingUser(null);
+  }, []);
+
+  const onConversationUpdated = useCallback((data: { conversationId: number; lastMessage: MessageDto }) => {
+    setConversations(prev =>
+      prev.map(c => Number(c.id) === data.conversationId
+        ? { ...c, lastMessage: data.lastMessage, unreadCount: (Number(c.unreadCount ?? 0)) + 1 }
+        : c
+      )
+    );
+  }, []);
+
+  const onUserTyping = useCallback((data: { userId: number; conversationId: number }) => {
+    if (data.userId !== currentUserId) {
+      setTypingUser(data.userId);
+      // Auto-clear typing indicator sau 3s
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = setTimeout(() => setTypingUser(null), 3000);
+    }
+  }, [currentUserId]);
+
+  const onUserStopTyping = useCallback((_data: { userId: number; conversationId: number }) => {
+    setTypingUser(null);
+  }, []);
+
+  // Đăng ký SignalR events 1 lần
+  useEffect(() => {
+    chatConn.on('ReceiveMessage', onReceiveMessage);
+    chatConn.on('ConversationUpdated', onConversationUpdated);
+    chatConn.on('UserTyping', onUserTyping);
+    chatConn.on('UserStopTyping', onUserStopTyping);
+
+    // Online status tracking
+    const onUserOnline = (userId: number) => {
+      setOnlineUserIds(prev => new Set(prev).add(userId));
+    };
+    const onUserOffline = (userId: number) => {
+      setOnlineUserIds(prev => { const s = new Set(prev); s.delete(userId); return s; });
+    };
+    chatConn.on('UserOnline', onUserOnline);
+    chatConn.on('UserOffline', onUserOffline);
+
+    // Lấy danh sách online hiện tại
+    chatConn.invoke('GetOnlineUsers')
+      .then((ids: number[]) => setOnlineUserIds(new Set(ids)))
+      .catch(() => {});
+
+    return () => {
+      chatConn.off('ReceiveMessage', onReceiveMessage);
+      chatConn.off('ConversationUpdated', onConversationUpdated);
+      chatConn.off('UserTyping', onUserTyping);
+      chatConn.off('UserStopTyping', onUserStopTyping);
+      chatConn.off('UserOnline', onUserOnline);
+      chatConn.off('UserOffline', onUserOffline);
+    };
+  }, [chatConn, onReceiveMessage, onConversationUpdated, onUserTyping, onUserStopTyping]);
 
   // Load conversations
   useEffect(() => {
@@ -110,11 +197,24 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
       .catch(console.error);
   }, [targetUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Join/Leave SignalR group khi chuyển conversation
+  useEffect(() => {
+    const prev = prevConvRef.current;
+    if (prev !== null && prev !== activeConvId) {
+      chatConn.invoke('LeaveConversation', prev).catch(console.error);
+    }
+    if (activeConvId !== null) {
+      chatConn.invoke('JoinConversation', activeConvId).catch(console.error);
+    }
+    prevConvRef.current = activeConvId;
+  }, [activeConvId, chatConn]);
+
   // Load messages khi chọn conversation
   useEffect(() => {
     if (activeConvId === null) return;
     setMsgLoading(true);
     setMsgError(null);
+    setTypingUser(null);
     api.getApiConversationsIdMessages(activeConvId, { page: 1, pageSize: 50 })
       .then(res => {
         if (res.success && res.data) {
@@ -139,21 +239,36 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Gửi typing indicator khi gõ
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    if (activeConvId && e.target.value.trim()) {
+      chatConn.invoke('Typing', activeConvId).catch(() => {});
+    }
+  };
+
   const handleSend = async () => {
     const content = newMessage.trim();
     if (!content || !activeConvId || sending) return;
     setSending(true);
     try {
-      const res = await api.postApiConversationsIdMessages(activeConvId, { conversationId: activeConvId, content });
-      if (res.success && res.data) {
-        setMessages(prev => [...prev, res.data!]);
-        setNewMessage('');
-        // Cập nhật last message trong list
-        setConversations(prev =>
-          prev.map(c => Number(c.id) === activeConvId ? { ...c, lastMessage: res.data } : c)
-        );
-      }
-    } catch { /* ignore */ } finally {
+      // Gửi qua SignalR hub (hub tự lưu DB + broadcast)
+      await chatConn.invoke('SendMessage', activeConvId, content);
+      setNewMessage('');
+      chatConn.invoke('StopTyping', activeConvId).catch(() => {});
+    } catch {
+      // Fallback sang REST nếu SignalR lỗi
+      try {
+        const res = await api.postApiConversationsIdMessages(activeConvId, { conversationId: activeConvId, content });
+        if (res.success && res.data) {
+          setMessages(prev => [...prev, res.data!]);
+          setNewMessage('');
+          setConversations(prev =>
+            prev.map(c => Number(c.id) === activeConvId ? { ...c, lastMessage: res.data } : c)
+          );
+        }
+      } catch { /* ignore */ }
+    } finally {
       setSending(false);
     }
   };
@@ -186,6 +301,7 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
                 conv={conv}
                 active={Number(conv.id) === activeConvId}
                 currentUserId={currentUserId}
+                onlineUserIds={onlineUserIds}
                 onClick={() => setActiveConvId(Number(conv.id))}
               />
             </React.Fragment>
@@ -207,17 +323,27 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
             {/* Header */}
             <header className="p-4 flex items-center justify-between border-b border-surface-container">
               <div className="flex items-center gap-3">
-                <img
-                  alt={otherUser?.fullName || ''}
-                  className="w-10 h-10 rounded-full object-cover"
-                  src={otherUser?.avatarUrl || `https://picsum.photos/seed/${otherUser?.id}/50/50`}
-                  referrerPolicy="no-referrer"
-                />
+                <div className="relative">
+                  <img
+                    alt={otherUser?.fullName || ''}
+                    className="w-10 h-10 rounded-full object-cover"
+                    src={otherUser?.avatarUrl || `https://picsum.photos/seed/${otherUser?.id}/50/50`}
+                    referrerPolicy="no-referrer"
+                  />
+                  {otherUser?.id && onlineUserIds.has(Number(otherUser.id)) && (
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-surface rounded-full" />
+                  )}
+                </div>
                 <div>
                   <h3 className="font-bold text-on-surface leading-tight">
                     {otherUser?.fullName || otherUser?.username || 'Unknown'}
                   </h3>
-                  <p className="text-xs text-outline">@{otherUser?.username}</p>
+                  <p className="text-xs text-outline">
+                    {otherUser?.id && onlineUserIds.has(Number(otherUser.id))
+                      ? <span className="text-green-500 font-medium">Đang hoạt động</span>
+                      : <>@{otherUser?.username}</>
+                    }
+                  </p>
                 </div>
               </div>
             </header>
@@ -240,6 +366,16 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
                   <MessageBubble msg={msg} isSent={msg.senderId === currentUserId} />
                 </React.Fragment>
               ))}
+              {typingUser && (
+                <div className="flex items-center gap-2 text-outline text-xs animate-pulse">
+                  <div className="flex gap-1">
+                    <span className="w-1.5 h-1.5 bg-outline rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 bg-outline rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 bg-outline rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                  <span>Đang nhập...</span>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -251,7 +387,7 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
                   placeholder="Nhập tin nhắn..."
                   type="text"
                   value={newMessage}
-                  onChange={e => setNewMessage(e.target.value)}
+                  onChange={handleInputChange}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                   disabled={sending}
                 />

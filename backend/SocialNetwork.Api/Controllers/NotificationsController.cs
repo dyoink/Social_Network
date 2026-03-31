@@ -20,7 +20,7 @@ namespace SocialNetwork.Api.Controllers
         }
 
         private int CurrentUserId =>
-            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
         // ─── GET /api/notifications ────────────────────────────────────────────
 

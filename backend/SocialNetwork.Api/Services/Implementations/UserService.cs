@@ -11,11 +11,13 @@ namespace SocialNetwork.Api.Services.Implementations
     {
         private readonly SocialDbContext _context;
         private readonly ILogger<UserService> _logger;
+        private readonly IBadgeService _badgeService;
 
-        public UserService(SocialDbContext context, ILogger<UserService> logger)
+        public UserService(SocialDbContext context, ILogger<UserService> logger, IBadgeService badgeService)
         {
             _context = context;
             _logger = logger;
+            _badgeService = badgeService;
         }
 
         // ─── GetProfile ────────────────────────────────────────────────────────
@@ -45,6 +47,8 @@ namespace SocialNetwork.Api.Services.Implementations
             if (dto.AvatarUrl is not null) user.AvatarUrl = dto.AvatarUrl.Trim();
             if (dto.CoverUrl is not null)  user.CoverUrl = dto.CoverUrl.Trim();
             if (dto.DateOfBirth.HasValue)  user.DateOfBirth = dto.DateOfBirth;
+            if (dto.Hometown is not null)  user.Hometown = dto.Hometown.Trim();
+            if (dto.Gender is not null)    user.Gender = dto.Gender.Trim();
 
             user.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
@@ -95,6 +99,12 @@ namespace SocialNetwork.Api.Services.Implementations
             // Đếm lại followers của target sau khi toggle
             var newFollowersCount = await _context.Follows
                 .CountAsync(f => f.FollowingId == targetUserId);
+
+            // Kiểm tra badge cho target user (FollowersCount) khi follow
+            if (isFollowing)
+            {
+                try { await _badgeService.CheckAndAwardBadgesAsync(targetUserId); } catch { /* log elsewhere */ }
+            }
 
             return new FollowResultDto
             {
@@ -213,6 +223,8 @@ namespace SocialNetwork.Api.Services.Implementations
                 Email          = user.Email,
                 FullName       = user.FullName,
                 DateOfBirth    = user.DateOfBirth,
+                Hometown       = user.Hometown,
+                Gender         = user.Gender,
                 AvatarUrl      = user.AvatarUrl,
                 CoverUrl       = user.CoverUrl,
                 Bio            = user.Bio,
@@ -221,7 +233,8 @@ namespace SocialNetwork.Api.Services.Implementations
                 FollowersCount = followersCount,
                 FollowingCount = followingCount,
                 PostsCount     = postsCount,
-                IsFollowing    = isFollowing
+                IsFollowing    = isFollowing,
+                DisplayedBadge = await _badgeService.GetDisplayedBadgeAsync(user.Id)
             };
         }
 

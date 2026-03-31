@@ -1,4 +1,5 @@
 using System;
+using SocialNetwork.Api.DTOs.Badge;
 
 namespace SocialNetwork.Api.DTOs.User
 {
@@ -9,6 +10,8 @@ namespace SocialNetwork.Api.DTOs.User
         public string Email { get; set; } = string.Empty;
         public string? FullName { get; set; }
         public DateTime? DateOfBirth { get; set; }
+        public string? Hometown { get; set; }
+        public string? Gender { get; set; }
         public string? AvatarUrl { get; set; }
         public string? CoverUrl { get; set; }
         public string? Bio { get; set; }
@@ -23,6 +26,9 @@ namespace SocialNetwork.Api.DTOs.User
         /// true nếu currentUser đang follow người này (chỉ có ý nghĩa khi xem profile người khác)
         /// </summary>
         public bool IsFollowing { get; set; }
+
+        /// <summary>Badge đang hiển thị</summary>
+        public UserBadgeDto? DisplayedBadge { get; set; }
     }
 
     public class UpdateUserDto
@@ -32,6 +38,8 @@ namespace SocialNetwork.Api.DTOs.User
         public string? AvatarUrl { get; set; }
         public string? CoverUrl { get; set; }
         public DateTime? DateOfBirth { get; set; }
+        public string? Hometown { get; set; }
+        public string? Gender { get; set; }
     }
 
     public class UserSummaryDto
@@ -40,6 +48,9 @@ namespace SocialNetwork.Api.DTOs.User
         public string Username { get; set; } = string.Empty;
         public string? FullName { get; set; }
         public string? AvatarUrl { get; set; }
+
+        /// <summary>Badge đang hiển thị (nếu có)</summary>
+        public UserBadgeDto? DisplayedBadge { get; set; }
     }
 
     /// <summary>

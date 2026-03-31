@@ -23,6 +23,10 @@ namespace SocialNetwork.Api.Extensions
             services.AddScoped<IFileUploadService, FileUploadService>();
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<IReportService, ReportService>();
+            services.AddScoped<IBadgeService, BadgeService>();
+            services.AddScoped<IStoryService, StoryService>();
+            services.AddScoped<ISeedService, SeedService>();
+            services.AddHostedService<StoryCleanupService>();
             return services;
         }
 
@@ -55,6 +59,21 @@ namespace SocialNetwork.Api.Extensions
                             Encoding.UTF8.GetBytes(secretKey)),
                         // Token hết hạn đúng giờ, không có grace period
                         ClockSkew = TimeSpan.Zero
+                    };
+
+                    // SignalR gửi token qua query string ?access_token=...
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                            {
+                                context.Token = accessToken;
+                            }
+                            return Task.CompletedTask;
+                        }
                     };
                 });
 

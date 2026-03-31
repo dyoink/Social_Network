@@ -58,4 +58,37 @@ public class FileUploadService(IWebHostEnvironment env) : IFileUploadService
         header.AsSpan(0, 4).SequenceEqual(PngMagic)  ||
         header.AsSpan(0, 3).SequenceEqual(GifMagic)   ||
         header.AsSpan(0, 4).SequenceEqual(WebpRiff);
+
+    // ─── Video Upload ─────────────────────────────────────────────────────
+    private static readonly HashSet<string> AllowedVideoTypes = ["video/mp4", "video/webm"];
+    private static readonly HashSet<string> AllowedVideoExtensions = [".mp4", ".webm"];
+    private const long MaxVideoBytes = 50 * 1024 * 1024; // 50 MB
+
+    public async Task<string> SaveVideoAsync(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            throw new InvalidOperationException("File không hợp lệ.");
+
+        if (file.Length > MaxVideoBytes)
+            throw new InvalidOperationException("Video vượt quá giới hạn 50 MB.");
+
+        if (!AllowedVideoTypes.Contains(file.ContentType.ToLower()))
+            throw new InvalidOperationException("Chỉ chấp nhận video MP4 hoặc WebM.");
+
+        var ext = Path.GetExtension(file.FileName).ToLower();
+        if (!AllowedVideoExtensions.Contains(ext))
+            throw new InvalidOperationException("Phần mở rộng file không hợp lệ.");
+
+        var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
+        var videosDir = Path.Combine(webRoot, "videos");
+        Directory.CreateDirectory(videosDir);
+
+        var fileName = $"{Guid.NewGuid():N}{ext}";
+        var filePath = Path.Combine(videosDir, fileName);
+
+        await using var stream = File.Create(filePath);
+        await file.CopyToAsync(stream);
+
+        return $"/videos/{fileName}";
+    }
 }

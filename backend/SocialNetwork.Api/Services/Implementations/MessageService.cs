@@ -67,7 +67,7 @@ namespace SocialNetwork.Api.Services.Implementations
             if (userId == targetUserId)
                 throw new InvalidOperationException("Không thể chat với chính mình.");
 
-            // Tìm conversation 1-1 đã tồn tại
+            // Tìm conversation 1-1 đã tồn tại (lấy conversation nhỏ nhất nếu có duplicate)
             var existingConvId = await _db.ConversationParticipants
                 .Where(cp => cp.UserId == userId)
                 .Select(cp => cp.ConversationId)
@@ -76,6 +76,7 @@ namespace SocialNetwork.Api.Services.Implementations
                         .Where(cp => cp.UserId == targetUserId)
                         .Select(cp => cp.ConversationId)
                 )
+                .OrderBy(id => id)
                 .FirstOrDefaultAsync();
 
             if (existingConvId > 0)
@@ -87,16 +88,46 @@ namespace SocialNetwork.Api.Services.Implementations
                 return MapToDto(existing, userId, new Dictionary<int, int>());
             }
 
-            // Tạo mới
-            var conv = new Conversation();
+            // Tạo mới — atomic: conversation + participants trong 1 lần SaveChanges
+            var conv = new Conversation
+            {
+                Participants = new List<ConversationParticipant>
+                {
+                    new() { UserId = userId },
+                    new() { UserId = targetUserId }
+                }
+            };
             _db.Conversations.Add(conv);
-            await _db.SaveChangesAsync();
 
-            _db.ConversationParticipants.AddRange(
-                new ConversationParticipant { ConversationId = conv.Id, UserId = userId },
-                new ConversationParticipant { ConversationId = conv.Id, UserId = targetUserId }
-            );
-            await _db.SaveChangesAsync();
+            try
+            {
+                await _db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // Race condition: conversation đã được tạo bởi request khác
+                // Retry tìm conversation đã tồn tại
+                _db.ChangeTracker.Clear();
+                var retryConvId = await _db.ConversationParticipants
+                    .Where(cp => cp.UserId == userId)
+                    .Select(cp => cp.ConversationId)
+                    .Intersect(
+                        _db.ConversationParticipants
+                            .Where(cp => cp.UserId == targetUserId)
+                            .Select(cp => cp.ConversationId)
+                    )
+                    .OrderBy(id => id)
+                    .FirstOrDefaultAsync();
+
+                if (retryConvId > 0)
+                {
+                    var retryConv = await _db.Conversations
+                        .Include(c => c.Participants).ThenInclude(cp => cp.User)
+                        .FirstAsync(c => c.Id == retryConvId);
+                    return MapToDto(retryConv, userId, new Dictionary<int, int>());
+                }
+                throw;
+            }
 
             // Reload với navigation props
             var full = await _db.Conversations

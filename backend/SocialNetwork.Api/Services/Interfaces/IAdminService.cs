@@ -19,4 +19,5 @@ public interface IAdminService
     Task<PagedResult<ReportDto>> GetReportsAsync(string? status, int page, int pageSize);
     Task ResolveReportAsync(int reportId);
     Task DeleteReportAsync(int reportId);
+    Task<List<LeaderboardEntryDto>> GetLeaderboardAsync(int limit = 10);
 }

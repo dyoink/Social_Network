@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { getSocialNetworkApiV1, type PostDto, type CommentDto } from '../../api/api-generated';
 import useAuthStore from '../../store/authStore';
 import { timeAgo } from '../../utils/time';
+import BadgeChip from '../ui/BadgeChip';
 
 interface CommentItemProps {
   comment: CommentDto;
@@ -49,7 +50,12 @@ const CommentItem = ({ comment, onReply }: CommentItemProps) => {
       />
       <div className="flex-1">
         <div className="bg-surface-container-low rounded-2xl p-3">
-          <h5 className="text-xs font-bold text-on-surface mb-1">{authorName}</h5>
+          <h5 className="text-xs font-bold text-on-surface mb-1">
+            {authorName}
+            {comment.user?.displayedBadge && (
+              <span className="ml-1 align-middle"><BadgeChip badge={comment.user.displayedBadge} /></span>
+            )}
+          </h5>
           <p className="text-sm text-on-surface-variant leading-snug">{comment.content}</p>
         </div>
         <div className="flex items-center gap-4 mt-1 ml-2">

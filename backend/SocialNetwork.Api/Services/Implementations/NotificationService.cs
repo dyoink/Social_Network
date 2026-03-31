@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SocialNetwork.Api.Common;
 using SocialNetwork.Api.Data;
 using SocialNetwork.Api.DTOs.Notification;
 using SocialNetwork.Api.DTOs.User;
 using SocialNetwork.Api.Entities;
+using SocialNetwork.Api.Hubs;
 using SocialNetwork.Api.Services.Interfaces;
 
 namespace SocialNetwork.Api.Services.Implementations
@@ -11,10 +13,12 @@ namespace SocialNetwork.Api.Services.Implementations
     public class NotificationService : INotificationService
     {
         private readonly SocialDbContext _db;
+        private readonly IHubContext<NotificationHub> _notifHub;
 
-        public NotificationService(SocialDbContext db)
+        public NotificationService(SocialDbContext db, IHubContext<NotificationHub> notifHub)
         {
             _db = db;
+            _notifHub = notifHub;
         }
 
         // ─── GetAllAsync ───────────────────────────────────────────────────────
@@ -97,7 +101,7 @@ namespace SocialNetwork.Api.Services.Implementations
 
             if (duplicate) return;
 
-            _db.Notifications.Add(new Notification
+            var notification = new Notification
             {
                 UserId           = recipientId,
                 ActorId          = actorId,
@@ -105,8 +109,32 @@ namespace SocialNetwork.Api.Services.Implementations
                 EntityId         = entityId,
                 IsRead           = false,
                 CreatedAt        = DateTime.UtcNow
-            });
+            };
+            _db.Notifications.Add(notification);
             await _db.SaveChangesAsync();
+
+            // Push real-time qua SignalR
+            var actor = await _db.Users.FindAsync(actorId);
+            if (actor != null)
+            {
+                var notifDto = new NotificationDto
+                {
+                    Id               = notification.Id,
+                    Actor            = new UserSummaryDto
+                    {
+                        Id        = actor.Id,
+                        Username  = actor.Username,
+                        FullName  = actor.FullName,
+                        AvatarUrl = actor.AvatarUrl
+                    },
+                    NotificationType = type,
+                    EntityId         = entityId,
+                    IsRead           = false,
+                    CreatedAt        = notification.CreatedAt
+                };
+                await _notifHub.Clients.Group($"user_{recipientId}")
+                    .SendAsync("ReceiveNotification", notifDto);
+            }
         }
     }
 }

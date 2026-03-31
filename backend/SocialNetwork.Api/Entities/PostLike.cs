@@ -11,6 +11,10 @@ namespace SocialNetwork.Api.Entities
         public int PostId { get; set; }
         public virtual Post Post { get; set; } = null!;
 
+        /// <summary>Loại reaction: Like, Love, Wow, Angry, Sad. Default = Like.</summary>
+        [StringLength(10)]
+        public string ReactionType { get; set; } = "Like";
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

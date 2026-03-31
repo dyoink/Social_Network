@@ -16,7 +16,7 @@ namespace SocialNetwork.Api.Controllers
 
         // Lấy userId từ JWT claim — dùng trong [Authorize] endpoints
         private int CurrentUserId =>
-            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
         public AuthController(IAuthService authService)
         {

@@ -1,7 +1,8 @@
 import React from 'react';
-import { LayoutDashboard, Users, FileText, MessageSquare, Flag, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, MessageSquare, Flag, LogOut, X, Award, Sun, Moon, Sprout } from 'lucide-react';
+import useThemeStore from '../../store/themeStore';
 
-export type AdminTab = 'dashboard' | 'users' | 'posts' | 'comments' | 'reports';
+export type AdminTab = 'dashboard' | 'users' | 'posts' | 'comments' | 'reports' | 'badges' | 'seed';
 
 interface AdminLayoutProps {
   activeTab: AdminTab;
@@ -16,9 +17,14 @@ const navItems: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
   { key: 'posts',     label: 'Bài viết',     icon: <FileText className="w-5 h-5" /> },
   { key: 'comments',  label: 'Bình luận',    icon: <MessageSquare className="w-5 h-5" /> },
   { key: 'reports',   label: 'Báo cáo',      icon: <Flag className="w-5 h-5" /> },
+  { key: 'badges',    label: 'Danh hiệu',    icon: <Award className="w-5 h-5" /> },
+  { key: 'seed',      label: 'Seed Data',     icon: <Sprout className="w-5 h-5" /> },
 ];
 
-const AdminLayout = ({ activeTab, setTab, onExit, children }: AdminLayoutProps) => (
+const AdminLayout = ({ activeTab, setTab, onExit, children }: AdminLayoutProps) => {
+  const { theme, toggleTheme } = useThemeStore();
+
+  return (
   <div className="min-h-screen bg-surface-container-low flex flex-col md:flex-row">
     {/* Mobile top bar */}
     <div className="md:hidden flex items-center justify-between px-4 py-3 bg-surface-container-lowest border-b border-outline-variant/20">
@@ -26,9 +32,14 @@ const AdminLayout = ({ activeTab, setTab, onExit, children }: AdminLayoutProps) 
         <span className="font-headline text-lg font-extrabold text-primary">Social</span>
         <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">ADMIN</span>
       </div>
-      <button onClick={onExit} className="p-1.5 text-outline hover:text-on-surface hover:bg-surface-container rounded-lg transition-colors" title="Thoát Admin">
-        <X className="w-4 h-4" />
-      </button>
+      <div className="flex items-center gap-1">
+        <button onClick={toggleTheme} className="p-1.5 text-outline hover:text-on-surface hover:bg-surface-container rounded-lg transition-colors" title={theme === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'}>
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
+        <button onClick={onExit} className="p-1.5 text-outline hover:text-on-surface hover:bg-surface-container rounded-lg transition-colors" title="Thoát Admin">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
     </div>
     {/* Mobile tab bar */}
     <nav className="md:hidden flex overflow-x-auto gap-1 px-3 py-2 bg-surface-container-lowest border-b border-outline-variant/10">
@@ -55,9 +66,14 @@ const AdminLayout = ({ activeTab, setTab, onExit, children }: AdminLayoutProps) 
           <span className="font-headline text-xl font-extrabold text-primary">Social</span>
           <span className="ml-2 text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">ADMIN</span>
         </div>
-        <button onClick={onExit} className="p-1.5 text-outline hover:text-on-surface hover:bg-surface-container rounded-lg transition-colors" title="Thoát Admin">
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={toggleTheme} className="p-1.5 text-outline hover:text-on-surface hover:bg-surface-container rounded-lg transition-colors" title={theme === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'}>
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+          <button onClick={onExit} className="p-1.5 text-outline hover:text-on-surface hover:bg-surface-container rounded-lg transition-colors" title="Thoát Admin">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Nav */}
@@ -94,6 +110,7 @@ const AdminLayout = ({ activeTab, setTab, onExit, children }: AdminLayoutProps) 
       {children}
     </main>
   </div>
-);
+  );
+};
 
 export default AdminLayout;

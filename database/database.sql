@@ -15,6 +15,7 @@ CREATE TABLE users (
     bio           TEXT,
     role          VARCHAR(50)  NOT NULL DEFAULT 'Member',  -- 'Member' | 'Admin'
     is_active     BOOLEAN      NOT NULL DEFAULT TRUE,        -- FALSE = bị ban bởi Admin
+    is_seeded     BOOLEAN      NOT NULL DEFAULT FALSE,       -- TRUE = tạo bởi Admin Seed tool
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
@@ -136,3 +137,32 @@ CREATE TABLE reports (
 
 CREATE INDEX idx_reports_status      ON reports(status);
 CREATE INDEX idx_reports_reporter_id ON reports(reporter_id);
+
+-- ===========================================
+-- Posts: VideoUrl for Reels
+-- ===========================================
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS video_url TEXT;
+
+-- ===========================================
+-- Stories (24h)
+-- ===========================================
+
+CREATE TABLE stories (
+    id          SERIAL      PRIMARY KEY,
+    user_id     INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    media_url   TEXT        NOT NULL,
+    media_type  VARCHAR(10) NOT NULL DEFAULT 'Image',  -- 'Image' | 'Video'
+    caption     TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at  TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '24 hours')
+);
+
+CREATE INDEX idx_stories_expires_at ON stories(expires_at);
+
+-- Story Views (who viewed which story)
+CREATE TABLE story_views (
+    story_id   INTEGER     NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+    user_id    INTEGER     NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+    viewed_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (story_id, user_id)
+);

@@ -121,4 +121,16 @@ namespace SocialNetwork.Api.DTOs.Admin
         [Required, StringLength(100, MinimumLength = 6)]
         public string NewPassword { get; set; } = string.Empty;
     }
+
+    public class LeaderboardEntryDto
+    {
+        public int UserId { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string? FullName { get; set; }
+        public string? AvatarUrl { get; set; }
+        public int PostsCount { get; set; }
+        public int LikesReceived { get; set; }
+        public int CommentsCount { get; set; }
+        public int Score { get; set; }
+    }
 }

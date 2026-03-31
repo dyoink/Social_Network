@@ -15,6 +15,7 @@ import type { PostDto } from './api/api-generated';
 // --- State management ---
 import useAuthStore from './store/authStore';
 import type { UserDto } from './api/api-generated';
+import { startAllConnections, stopAllConnections } from './api/signalr';
 
 // --- Components ---
 import { Toaster } from 'react-hot-toast';
@@ -31,6 +32,9 @@ import ProfileView from './components/views/ProfileView';
 import MessengerView from './components/views/MessengerView';
 import SearchView from './components/views/SearchView';
 import NotificationsView from './components/views/NotificationsView';
+import HashtagView from './components/views/HashtagView';
+import SettingsView from './components/views/SettingsView';
+import ReelView from './components/views/ReelView';
 import AuthView from './components/views/AuthView';
 import AdminLayout, { type AdminTab } from './components/admin/AdminLayout';
 import AdminDashboardView from './components/views/admin/AdminDashboardView';
@@ -38,6 +42,9 @@ import AdminUsersView from './components/views/admin/AdminUsersView';
 import AdminPostsView from './components/views/admin/AdminPostsView';
 import AdminReportsView from './components/views/admin/AdminReportsView';
 import AdminCommentsView from './components/views/admin/AdminCommentsView';
+import AdminBadgesView from './components/admin/AdminBadgesView';
+import AdminSeedView from './components/views/admin/AdminSeedView';
+import PokeOverlay from './components/poke/PokeOverlay';
 
 /**
  * Chuyển đổi UserDto (backend) sang UserProfile (kiểu cũ dùng trong mock views).
@@ -46,6 +53,7 @@ import AdminCommentsView from './components/views/admin/AdminCommentsView';
 function mapToUserProfile(user: UserDto): UserProfile {
   return {
     id: String(user.id ?? ''),
+    username: user.username || '',
     name: user.fullName || user.username || 'Unknown',
     avatar: user.avatarUrl || `https://picsum.photos/seed/${user.username}/200/200`,
     cover: user.coverUrl || 'https://picsum.photos/seed/cover/1200/400',
@@ -53,7 +61,13 @@ function mapToUserProfile(user: UserDto): UserProfile {
     role: user.role || 'Member',
     followers: String(user.followersCount ?? 0),
     following: String(user.followingCount ?? 0),
-    posts: '0', // TODO: thêm postsCount vào UserDto khi implement PostsController
+    posts: String(user.postsCount ?? 0),
+    isFollowing: user.isFollowing,
+    createdAt: user.createdAt,
+    dateOfBirth: user.dateOfBirth ?? undefined,
+    hometown: user.hometown ?? undefined,
+    gender: user.gender ?? undefined,
+    displayedBadge: user.displayedBadge,
   };
 }
 
@@ -69,6 +83,8 @@ export default function App() {
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
   // Target user ID để mở conversation trong Messenger (từ Profile "Nhắn tin")
   const [messengerTargetUserId, setMessengerTargetUserId] = useState<number | null>(null);
+  // Hashtag đang xem
+  const [activeHashtag, setActiveHashtag] = useState<string>('');
 
   // Profile đang xem — mặc định là profile của chính mình
   const currentUserProfile = user ? mapToUserProfile(user) : null;
@@ -79,7 +95,16 @@ export default function App() {
     if (user) setSelectedUser(mapToUserProfile(user));
   }, [user]);
 
+  // Khởi động / dừng SignalR connections theo trạng thái đăng nhập
+  useEffect(() => {
+    if (isAuthenticated) {
+      startAllConnections();
+    }
+    return () => { stopAllConnections(); };
+  }, [isAuthenticated]);
+
   const handleLogout = () => {
+    stopAllConnections();
     logout();
     setView('newsfeed');
   };
@@ -92,6 +117,11 @@ export default function App() {
   const handleMessageUser = (targetUserId: number) => {
     setMessengerTargetUserId(targetUserId);
     setView('messenger');
+  };
+
+  const handleHashtagClick = (tag: string) => {
+    setActiveHashtag(tag);
+    setView('hashtag');
   };
 
   // Scroll to top on view change
@@ -122,6 +152,8 @@ export default function App() {
           {adminTab === 'posts'     && <AdminPostsView />}
           {adminTab === 'comments'  && <AdminCommentsView />}
           {adminTab === 'reports'   && <AdminReportsView />}
+          {adminTab === 'badges'   && <AdminBadgesView />}
+          {adminTab === 'seed'     && <AdminSeedView />}
         </AdminLayout>
       ) : (
         <>
@@ -152,11 +184,14 @@ export default function App() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {currentView === 'newsfeed' && <NewsfeedView onOpenCreate={() => setIsCreateOpen(true)} onCommentClick={setActiveCommentPost} refreshKey={feedRefreshKey} />}
-                  {currentView === 'profile' && <ProfileView user={selectedUser ?? undefined} onCommentClick={setActiveCommentPost} onMessageClick={handleMessageUser} />}
+                  {currentView === 'newsfeed' && <NewsfeedView onOpenCreate={() => setIsCreateOpen(true)} onCommentClick={setActiveCommentPost} refreshKey={feedRefreshKey} onHashtagClick={handleHashtagClick} />}
+                  {currentView === 'profile' && <ProfileView user={selectedUser ?? undefined} onCommentClick={setActiveCommentPost} onMessageClick={handleMessageUser} onHashtagClick={handleHashtagClick} />}
                   {currentView === 'messenger' && <MessengerView targetUserId={messengerTargetUserId} />}
-                  {currentView === 'search' && <SearchView onCommentClick={setActiveCommentPost} onUserClick={handleViewProfile} />}
+                  {currentView === 'search' && <SearchView onCommentClick={setActiveCommentPost} onUserClick={handleViewProfile} onHashtagClick={handleHashtagClick} />}
                   {currentView === 'notifications' && <NotificationsView />}
+                  {currentView === 'hashtag' && activeHashtag && <HashtagView tag={activeHashtag} onBack={() => setView('newsfeed')} onCommentClick={setActiveCommentPost} onHashtagClick={handleHashtagClick} />}
+                  {currentView === 'settings' && <SettingsView onLogout={handleLogout} />}
+                  {currentView === 'reels' && <ReelView />}
                 </motion.div>
                 </AnimatePresence>
               </ErrorBoundary>
@@ -172,7 +207,7 @@ export default function App() {
                 }}
               />
             ) : currentView !== 'profile' ? (
-              <RightSidebar onUserClick={handleViewProfile} />
+              <RightSidebar onUserClick={handleViewProfile} onHashtagClick={handleHashtagClick} />
             ) : null}
           </main>
 
@@ -192,6 +227,9 @@ export default function App() {
             <button onClick={() => setView('notifications')} className={`p-2 ${currentView === 'notifications' ? 'text-primary' : 'text-outline'}`}><Bell className="w-6 h-6" /></button>
             <button onClick={() => currentUserProfile && handleViewProfile(currentUserProfile)} className={`p-2 ${currentView === 'profile' && selectedUser?.id === currentUserProfile?.id ? 'text-primary' : 'text-outline'}`}><User className="w-6 h-6" /></button>
           </nav>
+
+          {/* Poke overlay — hiển thị full-screen effect khi nhận poke */}
+          <PokeOverlay />
         </>
       )}
     </div>

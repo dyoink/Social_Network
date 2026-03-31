@@ -9,6 +9,7 @@ function summaryToProfile(u: UserSummaryDto): UserProfile {
   return {
     id:        String(u.id ?? ''),
     name:      u.fullName || u.username || 'Unknown',
+    username:  u.username || '',
     avatar:    u.avatarUrl || `https://picsum.photos/seed/${u.id}/100/100`,
     cover:     `https://picsum.photos/seed/cover${u.id}/1200/400`,
     bio:       '',
@@ -76,9 +77,10 @@ type Tab = 'all' | 'people' | 'posts';
 interface SearchViewProps {
   onCommentClick: (post: PostDto) => void;
   onUserClick: (u: UserProfile) => void;
+  onHashtagClick?: (tag: string) => void;
 }
 
-const SearchView = ({ onCommentClick, onUserClick }: SearchViewProps) => {
+const SearchView = ({ onCommentClick, onUserClick, onHashtagClick }: SearchViewProps) => {
   const api = getSocialNetworkApiV1();
   const [query,      setQuery]      = useState('');
   const [activeTab,  setActiveTab]  = useState<Tab>('all');
@@ -199,6 +201,7 @@ const SearchView = ({ onCommentClick, onUserClick }: SearchViewProps) => {
                   <PostCard
                     post={p}
                     onCommentClick={onCommentClick}
+                    onHashtagClick={onHashtagClick}
                   />
                 </React.Fragment>
               ))}

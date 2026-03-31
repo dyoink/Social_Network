@@ -23,6 +23,13 @@ namespace SocialNetwork.Api.Entities
         [DataType(DataType.Date)]
         public DateTime? DateOfBirth { get; set; }
 
+        [StringLength(100)]
+        public string? Hometown { get; set; }
+
+        /// <summary>Male | Female | Other | null</summary>
+        [StringLength(20)]
+        public string? Gender { get; set; }
+
         public string? AvatarUrl { get; set; }
         public string? CoverUrl { get; set; }
         public string? Bio { get; set; }
@@ -32,6 +39,9 @@ namespace SocialNetwork.Api.Entities
 
         /// <summary>false = bị ban, không thể đăng nhập hoặc thực hiện thao tác</summary>
         public bool IsActive { get; set; } = true;
+
+        /// <summary>true = tạo bởi Admin Seed tool, có thể xoá hàng loạt</summary>
+        public bool IsSeeded { get; set; } = false;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -52,5 +62,8 @@ namespace SocialNetwork.Api.Entities
         // Notifications
         public virtual ICollection<Notification> NotificationsReceived { get; set; } = new List<Notification>();
         public virtual ICollection<Notification> NotificationsTriggered { get; set; } = new List<Notification>();
+
+        // Badges
+        public virtual ICollection<UserBadge> UserBadges { get; set; } = new List<UserBadge>();
     }
 }

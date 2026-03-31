@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SocialNetwork.Api.Common;
 using SocialNetwork.Api.DTOs.Admin;
+using SocialNetwork.Api.DTOs.Badge;
 using SocialNetwork.Api.Services.Interfaces;
 
 namespace SocialNetwork.Api.Controllers;
@@ -9,7 +10,7 @@ namespace SocialNetwork.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Roles = "Admin")]
-public class AdminController(IAdminService adminService) : ControllerBase
+public class AdminController(IAdminService adminService, IBadgeService badgeService) : ControllerBase
 {
     // ─── Stats ────────────────────────────────────────────────────────────────
 
@@ -27,6 +28,14 @@ public class AdminController(IAdminService adminService) : ControllerBase
     {
         var chart = await adminService.GetGrowthChartAsync(days);
         return Ok(ApiResponse<GrowthChartDto>.Ok(chart));
+    }
+
+    [HttpGet("leaderboard")]
+    [ProducesResponseType<ApiResponse<List<LeaderboardEntryDto>>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetLeaderboard([FromQuery] int limit = 10)
+    {
+        var result = await adminService.GetLeaderboardAsync(limit);
+        return Ok(ApiResponse<List<LeaderboardEntryDto>>.Ok(result));
     }
 
     // ─── Users ────────────────────────────────────────────────────────────────
@@ -196,6 +205,96 @@ public class AdminController(IAdminService adminService) : ControllerBase
         catch (KeyNotFoundException)
         {
             return NotFound(ApiResponse.Fail("Không tìm thấy báo cáo."));
+        }
+    }
+
+    // ─── Badges ────────────────────────────────────────────────────────────────
+
+    [HttpGet("badges")]
+    [ProducesResponseType<ApiResponse<List<BadgeDto>>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetBadges()
+    {
+        var badges = await badgeService.GetAllBadgesAsync();
+        return Ok(ApiResponse<List<BadgeDto>>.Ok(badges));
+    }
+
+    [HttpPost("badges")]
+    [ProducesResponseType<ApiResponse<BadgeDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> CreateBadge([FromBody] CreateBadgeDto dto)
+    {
+        if (!ModelState.IsValid) return BadRequest(ApiResponse.Fail("Dữ liệu không hợp lệ."));
+        try
+        {
+            var badge = await badgeService.CreateBadgeAsync(dto);
+            return Ok(ApiResponse<BadgeDto>.Ok(badge));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+    }
+
+    [HttpPut("badges/{id}")]
+    [ProducesResponseType<ApiResponse<BadgeDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateBadge(int id, [FromBody] UpdateBadgeDto dto)
+    {
+        try
+        {
+            var badge = await badgeService.UpdateBadgeAsync(id, dto);
+            return Ok(ApiResponse<BadgeDto>.Ok(badge));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(ApiResponse.Fail("Không tìm thấy badge."));
+        }
+    }
+
+    [HttpDelete("badges/{id}")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> DeleteBadge(int id)
+    {
+        try
+        {
+            await badgeService.DeleteBadgeAsync(id);
+            return Ok(ApiResponse.Ok("Badge đã bị xóa."));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(ApiResponse.Fail("Không tìm thấy badge."));
+        }
+    }
+
+    [HttpPost("users/{userId}/badges/{badgeId}")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> AwardBadge(int userId, int badgeId)
+    {
+        try
+        {
+            await badgeService.AwardBadgeAsync(userId, badgeId);
+            return Ok(ApiResponse.Ok("Đã cấp badge thành công."));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+    }
+
+    [HttpDelete("users/{userId}/badges/{badgeId}")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RevokeBadge(int userId, int badgeId)
+    {
+        try
+        {
+            await badgeService.RevokeBadgeAsync(userId, badgeId);
+            return Ok(ApiResponse.Ok("Đã thu hồi badge."));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
         }
     }
 }

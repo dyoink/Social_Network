@@ -21,8 +21,8 @@ namespace SocialNetwork.Api.Controllers
         /// <summary>Id của user đang đăng nhập, null nếu chưa đăng nhập.</summary>
         private int? CurrentUserId =>
             User.Identity?.IsAuthenticated == true
-                ? int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!)
-                : null;
+                && int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
+                ? id : null;
 
         // ─── GET /api/users/{username} ─────────────────────────────────────────
 
@@ -43,7 +43,7 @@ namespace SocialNetwork.Api.Controllers
         [ProducesResponseType<ApiResponse<UserDto>>(200)]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserDto dto)
         {
-            var updated = await _userService.UpdateProfileAsync(CurrentUserId!.Value, dto);
+            var updated = await _userService.UpdateProfileAsync(CurrentUserId.GetValueOrDefault(), dto);
             return Ok(ApiResponse<UserDto>.Ok(updated));
         }
 
@@ -55,7 +55,7 @@ namespace SocialNetwork.Api.Controllers
         [ProducesResponseType<ApiResponse<FollowResultDto>>(200)]
         public async Task<IActionResult> ToggleFollow(int id)
         {
-            var result = await _userService.ToggleFollowAsync(CurrentUserId!.Value, id);
+            var result = await _userService.ToggleFollowAsync(CurrentUserId.GetValueOrDefault(), id);
             return Ok(ApiResponse<FollowResultDto>.Ok(result));
         }
 
@@ -106,7 +106,7 @@ namespace SocialNetwork.Api.Controllers
         [ProducesResponseType<ApiResponse<List<UserSummaryDto>>>(200)]
         public async Task<IActionResult> GetSuggestions()
         {
-            var results = await _userService.GetSuggestionsAsync(CurrentUserId!.Value);
+            var results = await _userService.GetSuggestionsAsync(CurrentUserId.GetValueOrDefault());
             return Ok(ApiResponse<List<UserSummaryDto>>.Ok(results));
         }
 
@@ -118,7 +118,7 @@ namespace SocialNetwork.Api.Controllers
         [ProducesResponseType(200)]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
         {
-            await _userService.ChangePasswordAsync(CurrentUserId!.Value, dto);
+            await _userService.ChangePasswordAsync(CurrentUserId.GetValueOrDefault(), dto);
             return Ok(ApiResponse.Ok("Đổi mật khẩu thành công."));
         }
     }

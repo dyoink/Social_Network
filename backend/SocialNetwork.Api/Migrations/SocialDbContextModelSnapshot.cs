@@ -22,6 +22,208 @@ namespace SocialNetwork.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SocialNetwork.Api.Entities.Badge", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("ConditionType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int?>("ConditionValue")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsManualOnly")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Badges");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Color = "#22c55e",
+                            ConditionType = "DaysActive",
+                            ConditionValue = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Chào mừng bạn đến với mạng xã hội!",
+                            Icon = "🌱",
+                            IsManualOnly = false,
+                            Name = "Người mới"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Color = "#3b82f6",
+                            ConditionType = "PostCount",
+                            ConditionValue = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Đăng bài viết đầu tiên",
+                            Icon = "📝",
+                            IsManualOnly = false,
+                            Name = "Blogger"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Color = "#6366f1",
+                            ConditionType = "PostCount",
+                            ConditionValue = 10,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Đăng 10 bài viết",
+                            Icon = "✍️",
+                            IsManualOnly = false,
+                            Name = "Nhà văn"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Color = "#8b5cf6",
+                            ConditionType = "PostCount",
+                            ConditionValue = 50,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Đăng 50 bài viết",
+                            Icon = "📚",
+                            IsManualOnly = false,
+                            Name = "Blogger kỳ cựu"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Color = "#ec4899",
+                            ConditionType = "LikesReceived",
+                            ConditionValue = 10,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Nhận 10 lượt thích",
+                            Icon = "💗",
+                            IsManualOnly = false,
+                            Name = "Được yêu thích"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Color = "#f59e0b",
+                            ConditionType = "LikesReceived",
+                            ConditionValue = 100,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Nhận 100 lượt thích",
+                            Icon = "⭐",
+                            IsManualOnly = false,
+                            Name = "Ngôi sao"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Color = "#f97316",
+                            ConditionType = "FollowersCount",
+                            ConditionValue = 50,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Có 50 người theo dõi",
+                            Icon = "👑",
+                            IsManualOnly = false,
+                            Name = "Influencer"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Color = "#14b8a6",
+                            ConditionType = "CommentsCount",
+                            ConditionValue = 20,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Đăng 20 bình luận",
+                            Icon = "💬",
+                            IsManualOnly = false,
+                            Name = "Bình luận viên"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Color = "#eab308",
+                            ConditionType = "PokesSent",
+                            ConditionValue = 10,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Gửi 10 lần chọc",
+                            Icon = "⚡",
+                            IsManualOnly = false,
+                            Name = "Chọc phá"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Color = "#a855f7",
+                            ConditionType = "DaysActive",
+                            ConditionValue = 30,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Hoạt động 30 ngày",
+                            Icon = "🏆",
+                            IsManualOnly = false,
+                            Name = "Kỳ cựu"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Color = "#ef4444",
+                            ConditionType = "DaysActive",
+                            ConditionValue = 365,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Hoạt động 365 ngày",
+                            Icon = "🔥",
+                            IsManualOnly = false,
+                            Name = "Huyền thoại"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Color = "#06b6d4",
+                            ConditionType = "Manual",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Danh hiệu đặc biệt do Admin cấp",
+                            Icon = "💎",
+                            IsManualOnly = true,
+                            Name = "VIP"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Color = "#64748b",
+                            ConditionType = "Manual",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Người kiểm duyệt nội dung",
+                            Icon = "🛡️",
+                            IsManualOnly = true,
+                            Name = "Moderator"
+                        });
+                });
+
             modelBuilder.Entity("SocialNetwork.Api.Entities.Comment", b =>
                 {
                     b.Property<int>("Id")
@@ -200,11 +402,35 @@ namespace SocialNetwork.Api.Migrations
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("VideoUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("Posts");
+                });
+
+            modelBuilder.Entity("SocialNetwork.Api.Entities.PostHashtag", b =>
+                {
+                    b.Property<int>("PostId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Tag")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("PostId", "Tag");
+
+                    b.HasIndex("Tag");
+
+                    b.ToTable("PostHashtags");
                 });
 
             modelBuilder.Entity("SocialNetwork.Api.Entities.PostLike", b =>
@@ -217,6 +443,11 @@ namespace SocialNetwork.Api.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReactionType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.HasKey("UserId", "PostId");
 
@@ -273,6 +504,62 @@ namespace SocialNetwork.Api.Migrations
                     b.ToTable("Reports");
                 });
 
+            modelBuilder.Entity("SocialNetwork.Api.Entities.Story", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Caption")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MediaType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("MediaUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Stories");
+                });
+
+            modelBuilder.Entity("SocialNetwork.Api.Entities.StoryView", b =>
+                {
+                    b.Property<int>("StoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ViewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("StoryId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("StoryViews");
+                });
+
             modelBuilder.Entity("SocialNetwork.Api.Entities.User", b =>
                 {
                     b.Property<int>("Id")
@@ -305,7 +592,18 @@ namespace SocialNetwork.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("Gender")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Hometown")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsSeeded")
                         .HasColumnType("boolean");
 
                     b.Property<string>("PasswordHash")
@@ -328,6 +626,27 @@ namespace SocialNetwork.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("SocialNetwork.Api.Entities.UserBadge", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("BadgeId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("EarnedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDisplayed")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("UserId", "BadgeId");
+
+                    b.HasIndex("BadgeId");
+
+                    b.ToTable("UserBadges");
                 });
 
             modelBuilder.Entity("SocialNetwork.Api.Entities.Comment", b =>
@@ -443,6 +762,17 @@ namespace SocialNetwork.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SocialNetwork.Api.Entities.PostHashtag", b =>
+                {
+                    b.HasOne("SocialNetwork.Api.Entities.Post", "Post")
+                        .WithMany("Hashtags")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+                });
+
             modelBuilder.Entity("SocialNetwork.Api.Entities.PostLike", b =>
                 {
                     b.HasOne("SocialNetwork.Api.Entities.Post", "Post")
@@ -487,6 +817,60 @@ namespace SocialNetwork.Api.Migrations
                     b.Navigation("TargetUser");
                 });
 
+            modelBuilder.Entity("SocialNetwork.Api.Entities.Story", b =>
+                {
+                    b.HasOne("SocialNetwork.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SocialNetwork.Api.Entities.StoryView", b =>
+                {
+                    b.HasOne("SocialNetwork.Api.Entities.Story", "Story")
+                        .WithMany("Views")
+                        .HasForeignKey("StoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SocialNetwork.Api.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Story");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SocialNetwork.Api.Entities.UserBadge", b =>
+                {
+                    b.HasOne("SocialNetwork.Api.Entities.Badge", "Badge")
+                        .WithMany("UserBadges")
+                        .HasForeignKey("BadgeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SocialNetwork.Api.Entities.User", "User")
+                        .WithMany("UserBadges")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Badge");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SocialNetwork.Api.Entities.Badge", b =>
+                {
+                    b.Navigation("UserBadges");
+                });
+
             modelBuilder.Entity("SocialNetwork.Api.Entities.Comment", b =>
                 {
                     b.Navigation("Replies");
@@ -503,7 +887,14 @@ namespace SocialNetwork.Api.Migrations
                 {
                     b.Navigation("Comments");
 
+                    b.Navigation("Hashtags");
+
                     b.Navigation("Likes");
+                });
+
+            modelBuilder.Entity("SocialNetwork.Api.Entities.Story", b =>
+                {
+                    b.Navigation("Views");
                 });
 
             modelBuilder.Entity("SocialNetwork.Api.Entities.User", b =>
@@ -525,6 +916,8 @@ namespace SocialNetwork.Api.Migrations
                     b.Navigation("PostLikes");
 
                     b.Navigation("Posts");
+
+                    b.Navigation("UserBadges");
                 });
 #pragma warning restore 612, 618
         }

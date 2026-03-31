@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, Bell, LogOut, MessageSquare, Sun, Moon } from 'lucide-react';
 import { View, UserProfile } from '../../types';
 import { getSocialNetworkApiV1 } from '../../api/api-generated';
+import { getChatConnection, getNotificationConnection } from '../../api/signalr';
 import useThemeStore from '../../store/themeStore';
 
 interface TopNavProps {
@@ -21,13 +22,29 @@ const TopNav = ({ currentView, setView, onProfileClick, onLogout, user }: TopNav
   useEffect(() => {
     if (!user) return;
     const api = getSocialNetworkApiV1();
-    const fetchCounts = () => {
-      api.getApiNotificationsUnreadCount().then(r => { if (r.success && r.data) setNotifCount(Number(r.data.count ?? 0)); }).catch(console.error);
-      api.getApiConversationsUnreadCount().then(r => { if (r.success && r.data) setMsgCount(Number(r.data.count ?? 0)); }).catch(console.error);
+
+    // Lấy counts ban đầu qua REST
+    api.getApiNotificationsUnreadCount().then(r => { if (r.success && r.data) setNotifCount(Number(r.data.count ?? 0)); }).catch(console.error);
+    api.getApiConversationsUnreadCount().then(r => { if (r.success && r.data) setMsgCount(Number(r.data.count ?? 0)); }).catch(console.error);
+
+    // SignalR real-time updates — tăng badge count khi có event mới
+    const notifConn = getNotificationConnection();
+    const chatConn = getChatConnection();
+
+    const onReceiveNotification = () => {
+      setNotifCount(prev => prev + 1);
     };
-    fetchCounts();
-    const interval = setInterval(fetchCounts, 30_000);
-    return () => clearInterval(interval);
+    const onConversationUpdated = () => {
+      setMsgCount(prev => prev + 1);
+    };
+
+    notifConn.on('ReceiveNotification', onReceiveNotification);
+    chatConn.on('ConversationUpdated', onConversationUpdated);
+
+    return () => {
+      notifConn.off('ReceiveNotification', onReceiveNotification);
+      chatConn.off('ConversationUpdated', onConversationUpdated);
+    };
   }, [user]);
 
   return (

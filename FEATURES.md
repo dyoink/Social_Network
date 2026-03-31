@@ -228,7 +228,7 @@
 | Bookmarks / Saved posts | Thêm bảng `bookmarks` + `POST /api/posts/{id}/bookmark` |
 | Chia sẻ bài viết | Copy link hoặc share vào Messenger |
 | Đổi email | `PUT /api/users/me/email` |
-| Settings page | Gom profile edit + đổi mật khẩu + notification preferences |
+| Settings page | ✅ Gom đổi mật khẩu + dark mode + notification preferences + Gemini AI + privacy |
 | Infinite scroll thực sự | IntersectionObserver thay nút Load More |
 | Skeleton loading | Thêm `PostCardSkeleton` cho NewsfeedView |
 | Toast notifications | `react-hot-toast` cho mọi action |

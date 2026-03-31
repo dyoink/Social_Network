@@ -166,7 +166,7 @@ public class AdminService(SocialDbContext db) : IAdminService
         var query = db.Posts.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(q))
-            query = query.Where(p => p.Content.Contains(q) || p.User.Username.Contains(q));
+            query = query.Where(p => p.Content.Contains(q) || (p.User != null && p.User.Username.Contains(q)));
 
         var total = await query.CountAsync();
 
@@ -177,8 +177,8 @@ public class AdminService(SocialDbContext db) : IAdminService
             .Select(p => new AdminPostDto
             {
                 Id               = p.Id,
-                AuthorUsername   = p.User.Username,
-                AuthorAvatarUrl  = p.User.AvatarUrl,
+                AuthorUsername   = p.User != null ? p.User.Username : "[deleted]",
+                AuthorAvatarUrl  = p.User != null ? p.User.AvatarUrl : null,
                 Content          = p.Content,
                 ImageUrl         = p.ImageUrl,
                 LikesCount       = p.Likes.Count,
@@ -219,11 +219,13 @@ public class AdminService(SocialDbContext db) : IAdminService
             {
                 Id                 = c.Id,
                 PostId             = c.PostId,
-                AuthorUsername     = c.User.Username,
-                AuthorAvatarUrl    = c.User.AvatarUrl,
+                AuthorUsername     = c.User != null ? c.User.Username : "[deleted]",
+                AuthorAvatarUrl    = c.User != null ? c.User.AvatarUrl : null,
                 Content            = c.Content,
                 ParentId           = c.ParentId,
-                PostContentPreview = c.Post.Content.Substring(0, Math.Min(c.Post.Content.Length, 80)),
+                PostContentPreview = c.Post != null && c.Post.Content != null
+                    ? c.Post.Content.Substring(0, Math.Min(c.Post.Content.Length, 80))
+                    : null,
                 CreatedAt          = c.CreatedAt,
             })
             .ToListAsync();
@@ -255,10 +257,12 @@ public class AdminService(SocialDbContext db) : IAdminService
             .Select(r => new ReportDto
             {
                 Id                  = r.Id,
-                ReporterUsername    = r.Reporter.Username,
+                ReporterUsername    = r.Reporter != null ? r.Reporter.Username : "[deleted]",
                 TargetUsername      = r.TargetUser != null ? r.TargetUser.Username : null,
                 TargetPostId        = r.TargetPostId,
-                TargetPostContent   = r.TargetPost != null ? r.TargetPost.Content.Substring(0, Math.Min(r.TargetPost.Content.Length, 100)) : null,
+                TargetPostContent   = r.TargetPost != null && r.TargetPost.Content != null
+                    ? r.TargetPost.Content.Substring(0, Math.Min(r.TargetPost.Content.Length, 100))
+                    : null,
                 Reason              = r.Reason,
                 Detail              = r.Detail,
                 Status              = r.Status,
@@ -285,5 +289,36 @@ public class AdminService(SocialDbContext db) : IAdminService
             ?? throw new KeyNotFoundException("Không tìm thấy báo cáo.");
         db.Reports.Remove(report);
         await db.SaveChangesAsync();
+    }
+
+    public async Task<List<LeaderboardEntryDto>> GetLeaderboardAsync(int limit = 10)
+    {
+        var users = await db.Users
+            .Where(u => u.IsActive)
+            .Select(u => new
+            {
+                u.Id,
+                u.Username,
+                u.FullName,
+                u.AvatarUrl,
+                PostsCount = u.Posts.Count,
+                LikesReceived = u.Posts.SelectMany(p => p.Likes).Count(),
+                CommentsCount = u.Comments.Count,
+            })
+            .OrderByDescending(u => u.PostsCount + u.LikesReceived + u.CommentsCount)
+            .Take(limit)
+            .ToListAsync();
+
+        return users.Select(u => new LeaderboardEntryDto
+        {
+            UserId = u.Id,
+            Username = u.Username,
+            FullName = u.FullName,
+            AvatarUrl = u.AvatarUrl,
+            PostsCount = u.PostsCount,
+            LikesReceived = u.LikesReceived,
+            CommentsCount = u.CommentsCount,
+            Score = u.PostsCount + u.LikesReceived + u.CommentsCount,
+        }).ToList();
     }
 }

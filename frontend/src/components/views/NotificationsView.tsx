@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Heart, MessageCircle, UserPlus, Bell, CheckCheck, Loader, AlertCircle } from 'lucide-react';
 import { getSocialNetworkApiV1, type NotificationDto } from '../../api/api-generated';
+import { getNotificationConnection } from '../../api/signalr';
 import { timeAgo } from '../../utils/time';
 
 // Icon theo loại thông báo
@@ -94,6 +95,17 @@ const NotificationsView = () => {
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Nhận thông báo real-time qua SignalR
+  const onReceiveNotification = useCallback((notif: NotificationDto) => {
+    setNotifications(prev => [notif, ...prev]);
+  }, []);
+
+  useEffect(() => {
+    const conn = getNotificationConnection();
+    conn.on('ReceiveNotification', onReceiveNotification);
+    return () => { conn.off('ReceiveNotification', onReceiveNotification); };
+  }, [onReceiveNotification]);
+
   const handleRead = (id: number) => {
     setNotifications(prev =>
       prev.map(n => Number(n.id) === id ? { ...n, isRead: true } : n)
@@ -111,6 +123,16 @@ const NotificationsView = () => {
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  // Lọc theo notification preferences từ localStorage
+  const getNotifPrefs = (): Record<string, boolean> => {
+    try { return JSON.parse(localStorage.getItem('social_notif_prefs') || '{}'); } catch { return {}; }
+  };
+  const notifPrefs = getNotifPrefs();
+  const filteredNotifications = notifications.filter(n => {
+    const type = n.notificationType ?? '';
+    return notifPrefs[type] ?? true; // mặc định bật
+  });
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -146,7 +168,7 @@ const NotificationsView = () => {
         </div>
       )}
 
-      {!loading && !error && notifications.length === 0 && (
+      {!loading && !error && filteredNotifications.length === 0 && (
         <div className="text-center py-20 text-outline">
           <Bell className="w-12 h-12 mx-auto mb-4 opacity-30" />
           <p className="text-lg font-headline">Chưa có thông báo nào</p>
@@ -154,7 +176,7 @@ const NotificationsView = () => {
       )}
 
       <div className="space-y-3">
-        {notifications.map(n => (
+        {filteredNotifications.map(n => (
           <React.Fragment key={Number(n.id)}><NotificationItem notification={n} onRead={handleRead} /></React.Fragment>
         ))}
       </div>

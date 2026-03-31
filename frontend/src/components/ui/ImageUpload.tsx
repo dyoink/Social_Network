@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Camera, X, Loader, AlertCircle } from 'lucide-react';
-import { getSocialNetworkApiV1 } from '../../api/api-generated';
+import { uploadImage } from '../../api/axios';
 
 interface ImageUploadProps {
   /** URL hiện tại (nếu có) */
@@ -14,7 +14,6 @@ interface ImageUploadProps {
 }
 
 const ImageUpload = ({ value, onChange, placeholder = 'Chọn ảnh', variant = 'banner', className = '' }: ImageUploadProps) => {
-  const api = getSocialNetworkApiV1();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError]         = useState<string | null>(null);
@@ -23,7 +22,7 @@ const ImageUpload = ({ value, onChange, placeholder = 'Chọn ảnh', variant = 
     setError(null);
     setUploading(true);
     try {
-      const res = await api.postApiUploadImage({ file });
+      const res = await uploadImage(file);
       if (res.success && res.data?.url) {
         onChange(res.data.url);
       } else {

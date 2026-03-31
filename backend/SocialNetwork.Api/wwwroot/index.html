@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Social Network API — Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a2e;--surface3:#222236;
+  --neon:#00f0ff;--neon2:#7c3aed;--neon3:#f472b6;--neon4:#22d3ee;--neon5:#a78bfa;
+  --green:#00ff88;--red:#ff4466;--orange:#ffaa00;--yellow:#ffe44d;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --radius:16px;--radius-sm:10px;
+}
+html{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);scrollbar-width:thin;scrollbar-color:var(--surface3) var(--bg)}
+body{min-height:100vh;overflow-x:hidden}
+a{color:var(--neon);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── Hero ── */
+.hero{position:relative;text-align:center;padding:80px 24px 60px;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50%;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(0,240,255,.08) 0%,transparent 70%);pointer-events:none}
+.hero h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:900;letter-spacing:-1px;background:linear-gradient(135deg,var(--neon),var(--neon2),var(--neon3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px}
+.hero p{font-size:1.1rem;color:var(--text2);max-width:600px;margin:0 auto 28px}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 20px;background:var(--surface2);border:1px solid rgba(0,240,255,.15);border-radius:999px;font-size:.85rem;color:var(--text2)}
+.hero-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 4px var(--green)}50%{opacity:.4;box-shadow:0 0 12px var(--green)}}
+
+/* ── Container ── */
+.container{max-width:1400px;margin:0 auto;padding:0 24px 80px}
+
+/* ── Section Headers ── */
+.section-title{font-size:1.3rem;font-weight:800;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.section-title .icon{width:32px;height:32px;border-radius:var(--radius-sm);display:grid;place-items:center;font-size:1rem}
+
+/* ── Stat Cards Grid ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:40px}
+.stat-card{background:var(--surface);border:1px solid rgba(255,255,255,.04);border-radius:var(--radius);padding:24px;position:relative;overflow:hidden;transition:transform .2s,border-color .3s}
+.stat-card:hover{transform:translateY(-2px);border-color:rgba(0,240,255,.15)}
+.stat-card::after{content:'';position:absolute;top:0;right:0;width:80px;height:80px;background:radial-gradient(circle at top right,var(--glow,.06),transparent 70%);pointer-events:none}
+.stat-card .label{font-size:.78rem;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:8px}
+.stat-card .value{font-size:1.8rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat-card .sub{font-size:.75rem;color:var(--text3);margin-top:6px}
+
+/* Color variants */
+.stat-card.neon{--glow:rgba(0,240,255,.06)}.stat-card.neon .value{color:var(--neon)}
+.stat-card.purple{--glow:rgba(124,58,237,.06)}.stat-card.purple .value{color:var(--neon2)}
+.stat-card.pink{--glow:rgba(244,114,182,.06)}.stat-card.pink .value{color:var(--neon3)}
+.stat-card.green{--glow:rgba(0,255,136,.06)}.stat-card.green .value{color:var(--green)}
+.stat-card.orange{--glow:rgba(255,170,0,.06)}.stat-card.orange .value{color:var(--orange)}
+.stat-card.red{--glow:rgba(255,68,102,.06)}.stat-card.red .value{color:var(--red)}
+
+/* ── Charts Grid ── */
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:20px;margin-bottom:40px}
+.chart-card{background:var(--surface);border:1px solid rgba(255,255,255,.04);border-radius:var(--radius);padding:24px;min-height:280px}
+.chart-card h3{font-size:.9rem;font-weight:700;margin-bottom:16px;color:var(--text2)}
+.chart-card canvas{width:100%!important;max-height:220px}
+
+/* ── Info Grid ── */
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:40px}
+.info-card{background:var(--surface);border:1px solid rgba(255,255,255,.04);border-radius:var(--radius);padding:24px}
+.info-card h3{font-size:.9rem;font-weight:700;margin-bottom:16px;color:var(--text2)}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.info-row:last-child{border:none}
+.info-row .key{color:var(--text3);font-size:.84rem}
+.info-row .val{font-weight:600;font-size:.88rem;font-variant-numeric:tabular-nums}
+
+/* ── Status Bar ── */
+.status-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid rgba(255,255,255,.04);padding:10px 24px;display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:var(--text3);z-index:100;backdrop-filter:blur(12px)}
+.status-bar .live{display:flex;align-items:center;gap:6px}
+.status-bar .live .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
+
+/* ── Links ── */
+.links{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;justify-content:center}
+.links a{padding:10px 24px;border-radius:var(--radius-sm);font-size:.88rem;font-weight:600;transition:all .2s}
+.link-primary{background:linear-gradient(135deg,var(--neon),var(--neon2));color:#000!important}
+.link-primary:hover{opacity:.85;text-decoration:none!important;transform:translateY(-1px)}
+.link-outline{border:1px solid rgba(255,255,255,.1);color:var(--text2)!important}
+.link-outline:hover{border-color:var(--neon);color:var(--neon)!important;text-decoration:none!important}
+
+/* ── Endpoints Table ── */
+.endpoints-card{background:var(--surface);border:1px solid rgba(255,255,255,.04);border-radius:var(--radius);padding:24px;margin-bottom:40px;overflow-x:auto}
+.endpoints-card h3{font-size:.9rem;font-weight:700;margin-bottom:16px;color:var(--text2)}
+.ep-table{width:100%;border-collapse:collapse;font-size:.84rem}
+.ep-table th{text-align:left;padding:10px 12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-size:.72rem;border-bottom:1px solid rgba(255,255,255,.06)}
+.ep-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.02)}
+.ep-table tr:hover td{background:rgba(255,255,255,.01)}
+.method{padding:3px 10px;border-radius:4px;font-weight:700;font-size:.72rem;text-transform:uppercase}
+.method.get{background:rgba(0,240,255,.1);color:var(--neon)}
+.method.post{background:rgba(0,255,136,.1);color:var(--green)}
+.method.put{background:rgba(255,170,0,.1);color:var(--orange)}
+.method.delete{background:rgba(255,68,102,.1);color:var(--red)}
+
+/* ── Histogram Bars ── */
+.histogram{display:flex;flex-direction:column;gap:8px}
+.hist-row{display:flex;align-items:center;gap:12px;font-size:.82rem}
+.hist-label{min-width:80px;color:var(--text3);text-align:right}
+.hist-bar-bg{flex:1;height:24px;background:var(--surface2);border-radius:6px;overflow:hidden;position:relative}
+.hist-bar{height:100%;border-radius:6px;transition:width .8s cubic-bezier(.4,0,.2,1);min-width:2px}
+.hist-value{min-width:50px;font-weight:600;font-variant-numeric:tabular-nums}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .hero{padding:50px 16px 40px}
+  .container{padding:0 16px 100px}
+  .charts-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .stat-card .value{font-size:1.4rem}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr}
+}
+
+/* ── Loading shimmer ── */
+.shimmer{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shimmer 1.5s ease-in-out infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ████ HERO ████ -->
+<header class="hero">
+  <h1>⚡ Social Network API</h1>
+  <p>Full-stack social platform — ASP.NET Core 10 &bull; PostgreSQL &bull; JWT Auth &bull; EF Core</p>
+  <div class="hero-badge">
+    <span class="dot"></span>
+    <span id="hero-status">Đang kết nối...</span>
+  </div>
+  <div class="links">
+    <a href="/scalar/v1" class="link-primary">📖 API Documentation (Scalar)</a>
+    <a href="/health" class="link-outline">💚 Health Check</a>
+    <a href="/openapi/v1.json" class="link-outline">📋 OpenAPI Spec</a>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ████ STAT CARDS ████ -->
+  <div class="section-title"><div class="icon" style="background:rgba(0,240,255,.1);color:var(--neon)">📊</div> Server Metrics</div>
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card neon"><div class="label">Uptime</div><div class="value" id="s-uptime">—</div><div class="sub" id="s-uptime-sub"></div></div>
+    <div class="stat-card green"><div class="label">Total Requests</div><div class="value" id="s-total-req">—</div><div class="sub" id="s-rpm-sub"></div></div>
+    <div class="stat-card purple"><div class="label">Req/min</div><div class="value" id="s-rpm">—</div><div class="sub">Requests per minute</div></div>
+    <div class="stat-card pink"><div class="label">Avg Response</div><div class="value" id="s-avg-resp">—</div><div class="sub">milliseconds</div></div>
+    <div class="stat-card orange"><div class="label">Active Connections</div><div class="value" id="s-active">—</div><div class="sub">right now</div></div>
+    <div class="stat-card neon"><div class="label">Memory (Working Set)</div><div class="value" id="s-memory">—</div><div class="sub" id="s-gc-mem-sub"></div></div>
+    <div class="stat-card purple"><div class="label">GC Managed Memory</div><div class="value" id="s-gc-mem">—</div><div class="sub" id="s-gc-sub"></div></div>
+    <div class="stat-card green"><div class="label">Threads</div><div class="value" id="s-threads">—</div><div class="sub">Active threads</div></div>
+  </div>
+
+  <!-- ████ CHARTS ████ -->
+  <div class="section-title"><div class="icon" style="background:rgba(124,58,237,.1);color:var(--neon2)">📈</div> Real-time Charts</div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>🔥 Requests per Minute (60 min)</h3>
+      <canvas id="chart-rpm"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>⏱️ Response Time Distribution</h3>
+      <canvas id="chart-resp"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>📡 HTTP Status Codes</h3>
+      <canvas id="chart-status"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>🔧 HTTP Methods</h3>
+      <canvas id="chart-methods"></canvas>
+    </div>
+  </div>
+
+  <!-- ████ DB STATS ████ -->
+  <div class="section-title"><div class="icon" style="background:rgba(0,255,136,.1);color:var(--green)">🗄️</div> Database Statistics</div>
+  <div class="stats-grid" id="db-stats-grid">
+    <div class="stat-card green"><div class="label">Users</div><div class="value" id="d-users">—</div></div>
+    <div class="stat-card neon"><div class="label">Posts</div><div class="value" id="d-posts">—</div></div>
+    <div class="stat-card purple"><div class="label">Comments</div><div class="value" id="d-comments">—</div></div>
+    <div class="stat-card pink"><div class="label">Messages</div><div class="value" id="d-messages">—</div></div>
+    <div class="stat-card orange"><div class="label">Notifications</div><div class="value" id="d-notifications">—</div></div>
+    <div class="stat-card red"><div class="label">Reports</div><div class="value" id="d-reports">—</div></div>
+    <div class="stat-card neon"><div class="label">Follows</div><div class="value" id="d-follows">—</div></div>
+    <div class="stat-card green"><div class="label">Likes</div><div class="value" id="d-likes">—</div></div>
+  </div>
+
+  <!-- ████ RESPONSE TIME HISTOGRAM ████ -->
+  <div class="section-title"><div class="icon" style="background:rgba(244,114,182,.1);color:var(--neon3)">⚡</div> Response Time Histogram</div>
+  <div class="info-grid" style="margin-bottom:40px">
+    <div class="info-card" style="grid-column:1/-1">
+      <div class="histogram" id="histogram"></div>
+    </div>
+  </div>
+
+  <!-- ████ SYSTEM INFO ████ -->
+  <div class="section-title"><div class="icon" style="background:rgba(255,170,0,.1);color:var(--orange)">🖥️</div> System Information</div>
+  <div class="info-grid">
+    <div class="info-card">
+      <h3>Runtime</h3>
+      <div class="info-row"><span class="key">Environment</span><span class="val" id="i-env">—</span></div>
+      <div class="info-row"><span class="key">.NET Version</span><span class="val" id="i-dotnet">—</span></div>
+      <div class="info-row"><span class="key">OS</span><span class="val" id="i-os">—</span></div>
+      <div class="info-row"><span class="key">Processors</span><span class="val" id="i-cpu">—</span></div>
+      <div class="info-row"><span class="key">Server Time (UTC)</span><span class="val" id="i-time">—</span></div>
+    </div>
+    <div class="info-card">
+      <h3>Garbage Collector</h3>
+      <div class="info-row"><span class="key">Gen 0 Collections</span><span class="val" id="i-gc0">—</span></div>
+      <div class="info-row"><span class="key">Gen 1 Collections</span><span class="val" id="i-gc1">—</span></div>
+      <div class="info-row"><span class="key">Gen 2 Collections</span><span class="val" id="i-gc2">—</span></div>
+      <div class="info-row"><span class="key">Managed Memory</span><span class="val" id="i-gcmem">—</span></div>
+      <div class="info-row"><span class="key">Thread Count</span><span class="val" id="i-threads">—</span></div>
+    </div>
+  </div>
+
+  <!-- ████ API ENDPOINTS ████ -->
+  <div class="section-title"><div class="icon" style="background:rgba(34,211,238,.1);color:var(--neon4)">🌐</div> API Endpoints</div>
+  <div class="endpoints-card">
+    <h3>Core Endpoints</h3>
+    <table class="ep-table">
+      <thead><tr><th>Method</th><th>Path</th><th>Description</th><th>Auth</th></tr></thead>
+      <tbody>
+        <tr><td><span class="method post">POST</span></td><td>/api/auth/register</td><td>Đăng ký tài khoản</td><td>—</td></tr>
+        <tr><td><span class="method post">POST</span></td><td>/api/auth/login</td><td>Đăng nhập → JWT</td><td>—</td></tr>
+        <tr><td><span class="method get">GET</span></td><td>/api/auth/me</td><td>Lấy profile hiện tại</td><td>🔒</td></tr>
+        <tr><td><span class="method get">GET</span></td><td>/api/posts/feed</td><td>Newsfeed (following + self)</td><td>🔒</td></tr>
+        <tr><td><span class="method post">POST</span></td><td>/api/posts</td><td>Tạo bài viết mới</td><td>🔒</td></tr>
+        <tr><td><span class="method get">GET</span></td><td>/api/posts/{id}/comments</td><td>Comments của bài viết</td><td>🔒</td></tr>
+        <tr><td><span class="method post">POST</span></td><td>/api/posts/{id}/like</td><td>Like / Unlike</td><td>🔒</td></tr>
+        <tr><td><span class="method get">GET</span></td><td>/api/users/search</td><td>Tìm kiếm users</td><td>🔒</td></tr>
+        <tr><td><span class="method post">POST</span></td><td>/api/users/{id}/follow</td><td>Follow / Unfollow</td><td>🔒</td></tr>
+        <tr><td><span class="method get">GET</span></td><td>/api/conversations</td><td>Danh sách cuộc trò chuyện</td><td>🔒</td></tr>
+        <tr><td><span class="method get">GET</span></td><td>/api/notifications</td><td>Danh sách thông báo</td><td>🔒</td></tr>
+        <tr><td><span class="method post">POST</span></td><td>/api/reports</td><td>Báo cáo vi phạm</td><td>🔒</td></tr>
+        <tr><td><span class="method get">GET</span></td><td>/api/admin/stats</td><td>Admin thống kê</td><td>🔒 Admin</td></tr>
+        <tr><td><span class="method get">GET</span></td><td>/api/metrics</td><td>Server metrics + DB stats</td><td>—</td></tr>
+        <tr><td><span class="method get">GET</span></td><td>/health</td><td>Health check</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ████ STATUS BAR ████ -->
+<div class="status-bar">
+  <div class="live"><span class="dot"></span> <span id="status-text">Connecting...</span></div>
+  <div>Auto-refresh: <strong>3s</strong> &nbsp;|&nbsp; <span id="last-update">—</span></div>
+</div>
+
+<!-- Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // ── Helpers ──
+  const $ = id => document.getElementById(id);
+  const fmt = n => typeof n === 'number' ? n.toLocaleString('vi-VN') : '—';
+  const fmtDec = (n, d=1) => typeof n === 'number' ? n.toFixed(d) : '—';
+
+  function fmtUptime(ts) {
+    if (!ts) return '—';
+    // ts is "HH:MM:SS.xxx" or "D.HH:MM:SS.xxx"
+    const str = ts.toString();
+    const parts = str.split('.');
+    let days = 0, timePart = str;
+    if (parts.length >= 2 && !str.includes(':')) return str;
+    if (parts.length === 3) { days = parseInt(parts[0]); timePart = parts[1]; }
+    else { timePart = parts[0]; }
+    const tp = timePart.split(':');
+    const h = parseInt(tp[0]) || 0, m = parseInt(tp[1]) || 0, s = parseInt(tp[2]) || 0;
+    if (days > 0) return `${days}d ${h}h ${m}m`;
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  }
+
+  // ── Chart Config ──
+  const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 600 },
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,.03)' }, ticks: { color: '#64748b', font: { size: 10 } } },
+      y: { grid: { color: 'rgba(255,255,255,.03)' }, ticks: { color: '#64748b', font: { size: 10 } }, beginAtZero: true }
+    }
+  };
+
+  // RPM Chart
+  const rpmCtx = $('chart-rpm').getContext('2d');
+  const rpmChart = new Chart(rpmCtx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ data: [], borderColor: '#00f0ff', backgroundColor: 'rgba(0,240,255,.08)', fill: true, tension: .4, pointRadius: 0, borderWidth: 2 }] },
+    options: { ...chartDefaults, scales: { ...chartDefaults.scales, x: { ...chartDefaults.scales.x, ticks: { ...chartDefaults.scales.x.ticks, maxTicksLimit: 12 } } } }
+  });
+
+  // Response Time Doughnut
+  const respCtx = $('chart-resp').getContext('2d');
+  const respChart = new Chart(respCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['<50ms', '<200ms', '<500ms', '<1s', '>1s'],
+      datasets: [{ data: [0,0,0,0,0], backgroundColor: ['#00ff88','#00f0ff','#7c3aed','#ffaa00','#ff4466'], borderWidth: 0, spacing: 3 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 16, font: { size: 11 } } } }, animation: { duration: 600 } }
+  });
+
+  // Status Codes Bar
+  const statusCtx = $('chart-status').getContext('2d');
+  const statusChart = new Chart(statusCtx, {
+    type: 'bar',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 6, borderSkipped: false }] },
+    options: { ...chartDefaults, plugins: { legend: { display: false } } }
+  });
+
+  // Methods Bar
+  const methodsCtx = $('chart-methods').getContext('2d');
+  const methodsChart = new Chart(methodsCtx, {
+    type: 'bar',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 6, borderSkipped: false }] },
+    options: { ...chartDefaults, indexAxis: 'y', plugins: { legend: { display: false } } }
+  });
+
+  const methodColors = { GET: '#00f0ff', POST: '#00ff88', PUT: '#ffaa00', DELETE: '#ff4466', PATCH: '#7c3aed', OPTIONS: '#64748b', HEAD: '#94a3b8' };
+  const statusColors = c => { if (c >= 500) return '#ff4466'; if (c >= 400) return '#ffaa00'; if (c >= 300) return '#7c3aed'; return '#00ff88'; };
+
+  // ── Histogram Builder ──
+  function buildHistogram(ht) {
+    const buckets = [
+      { label: '< 50ms', value: ht.under50Ms || 0, color: '#00ff88' },
+      { label: '< 200ms', value: ht.under200Ms || 0, color: '#00f0ff' },
+      { label: '< 500ms', value: ht.under500Ms || 0, color: '#7c3aed' },
+      { label: '< 1s', value: ht.under1000Ms || 0, color: '#ffaa00' },
+      { label: '> 1s', value: ht.over1000Ms || 0, color: '#ff4466' },
+    ];
+    const max = Math.max(...buckets.map(b => b.value), 1);
+    const el = $('histogram');
+    el.innerHTML = buckets.map(b => `
+      <div class="hist-row">
+        <span class="hist-label">${b.label}</span>
+        <div class="hist-bar-bg"><div class="hist-bar" style="width:${(b.value/max*100).toFixed(1)}%;background:${b.color}"></div></div>
+        <span class="hist-value" style="color:${b.color}">${fmt(b.value)}</span>
+      </div>
+    `).join('');
+  }
+
+  // ── Fetch & Update ──
+  let isFirstLoad = true;
+  let fetchCount = 0;
+
+  async function fetchMetrics() {
+    try {
+      // Alternate: every 3rd call fetch full (with DB), else server-only
+      const endpoint = (fetchCount % 3 === 0) ? '/api/metrics' : '/api/metrics/server';
+      const res = await fetch(endpoint);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      fetchCount++;
+
+      const s = data.server || data;
+      const db = data.database;
+
+      // Update hero status
+      $('hero-status').textContent = `Server running — ${s.environment}`;
+
+      // Server metrics
+      $('s-uptime').textContent = fmtUptime(s.uptime);
+      $('s-uptime-sub').textContent = `since ${new Date(s.serverTime).toLocaleString('vi-VN')}`;
+      $('s-total-req').textContent = fmt(s.totalRequests);
+      $('s-rpm-sub').textContent = `${fmt(s.requestsPerMinute)} req/min right now`;
+      $('s-rpm').textContent = fmt(s.requestsPerMinute);
+      $('s-avg-resp').textContent = fmtDec(s.avgResponseTimeMs, 1) + 'ms';
+      $('s-active').textContent = fmt(s.activeConnections);
+      $('s-memory').textContent = fmtDec(s.memoryUsedMb, 1) + ' MB';
+      $('s-gc-mem-sub').textContent = `Process working set`;
+      $('s-gc-mem').textContent = fmtDec(s.gcTotalMemoryMb, 2) + ' MB';
+      $('s-gc-sub').textContent = `Gen0: ${s.gcGen0Collections} | Gen1: ${s.gcGen1Collections} | Gen2: ${s.gcGen2Collections}`;
+      $('s-threads').textContent = fmt(s.threadCount);
+
+      // System info
+      $('i-env').textContent = s.environment;
+      $('i-dotnet').textContent = s.dotNetVersion;
+      $('i-os').textContent = s.osPlatform?.substring(0, 60) || '—';
+      $('i-cpu').textContent = s.processorCount;
+      $('i-time').textContent = new Date(s.serverTime).toLocaleString('vi-VN');
+      $('i-gc0').textContent = fmt(s.gcGen0Collections);
+      $('i-gc1').textContent = fmt(s.gcGen1Collections);
+      $('i-gc2').textContent = fmt(s.gcGen2Collections);
+      $('i-gcmem').textContent = fmtDec(s.gcTotalMemoryMb, 2) + ' MB';
+      $('i-threads').textContent = fmt(s.threadCount);
+
+      // RPM Chart
+      if (s.rpmHistory && s.rpmHistory.length) {
+        rpmChart.data.labels = s.rpmHistory.map(p => p.minute);
+        rpmChart.data.datasets[0].data = s.rpmHistory.map(p => p.count);
+        rpmChart.update(isFirstLoad ? 'none' : undefined);
+      }
+
+      // Response time histogram chart
+      if (s.responseTimeHistogram) {
+        const ht = s.responseTimeHistogram;
+        respChart.data.datasets[0].data = [ht.under50Ms, ht.under200Ms, ht.under500Ms, ht.under1000Ms, ht.over1000Ms];
+        respChart.update(isFirstLoad ? 'none' : undefined);
+        buildHistogram(ht);
+      }
+
+      // Status codes chart
+      if (s.statusCodes) {
+        const codes = Object.entries(s.statusCodes).sort((a,b) => a[0] - b[0]);
+        statusChart.data.labels = codes.map(c => c[0]);
+        statusChart.data.datasets[0].data = codes.map(c => c[1]);
+        statusChart.data.datasets[0].backgroundColor = codes.map(c => statusColors(parseInt(c[0])));
+        statusChart.update(isFirstLoad ? 'none' : undefined);
+      }
+
+      // Methods chart
+      if (s.methods) {
+        const methods = Object.entries(s.methods).sort((a,b) => b[1] - a[1]);
+        methodsChart.data.labels = methods.map(m => m[0]);
+        methodsChart.data.datasets[0].data = methods.map(m => m[1]);
+        methodsChart.data.datasets[0].backgroundColor = methods.map(m => methodColors[m[0]] || '#64748b');
+        methodsChart.update(isFirstLoad ? 'none' : undefined);
+      }
+
+      // DB stats (only when available)
+      if (db) {
+        $('d-users').textContent = fmt(db.totalUsers);
+        $('d-posts').textContent = fmt(db.totalPosts);
+        $('d-comments').textContent = fmt(db.totalComments);
+        $('d-messages').textContent = fmt(db.totalMessages);
+        $('d-notifications').textContent = fmt(db.totalNotifications);
+        $('d-reports').textContent = fmt(db.totalReports);
+        $('d-follows').textContent = fmt(db.totalFollows);
+        $('d-likes').textContent = fmt(db.totalLikes);
+      }
+
+      // Status bar
+      $('status-text').textContent = `Connected — ${fmt(s.totalRequests)} total requests`;
+      $('last-update').textContent = `Updated: ${new Date().toLocaleTimeString('vi-VN')}`;
+
+      isFirstLoad = false;
+    } catch (err) {
+      $('hero-status').textContent = '⚠️ Connection error';
+      $('status-text').textContent = `Error: ${err.message}`;
+      console.error('Metrics fetch error:', err);
+    }
+  }
+
+  // Initial load + auto-refresh every 3s
+  fetchMetrics();
+  setInterval(fetchMetrics, 3000);
+})();
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Rss, User, MessageSquare, Search, Bell, PlusSquare, ShieldCheck } from 'lucide-react';
+import { Rss, User, MessageSquare, Search, Bell, PlusSquare, ShieldCheck, Settings, Film } from 'lucide-react';
 import { View, UserProfile } from '../../types';
 
 interface SidebarProps {
@@ -47,6 +47,8 @@ const Sidebar = ({ currentView, setView, onOpenCreate, onProfileClick, user }: S
           <SidebarLink active={currentView === 'messenger'}    icon={<MessageSquare className="w-5 h-5" />} label="Messenger"   onClick={() => setView('messenger')} />
           <SidebarLink active={currentView === 'notifications'} icon={<Bell        className="w-5 h-5" />} label="Thông báo"   onClick={() => setView('notifications')} />
           <SidebarLink active={currentView === 'search'}       icon={<Search       className="w-5 h-5" />} label="Tìm kiếm"   onClick={() => setView('search')} />
+          <SidebarLink active={currentView === 'reels'}        icon={<Film         className="w-5 h-5" />} label="Reels"      onClick={() => setView('reels')} />
+          <SidebarLink active={currentView === 'settings'}     icon={<Settings     className="w-5 h-5" />} label="Cài đặt"    onClick={() => setView('settings')} />
           {user?.role === 'Admin' && (
             <SidebarLink active={currentView === 'admin'} icon={<ShieldCheck className="w-5 h-5" />} label="Admin Panel" onClick={() => setView('admin')} />
           )}

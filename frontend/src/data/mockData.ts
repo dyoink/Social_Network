@@ -3,6 +3,7 @@ import { UserProfile, Post } from '../types';
 export const MOCK_USER: UserProfile = {
   id: "u1",
   name: "Alex Rivers",
+  username: "alexrivers",
   avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBrqBPoinZYAiFkTo1G3R7ud82T5VLFv9us6nbpVt1tozpkyqWUr4mXy8fnaPlQitCJA7_YISxXReKL0rk-6wRWR4CNx40S2KD899zzbSAsx7XXACKOuBY89WD0DRbqMxMpoL806dknIIyCZbCHNuUcL4vcsx6clM5DtFEPWFHamOTE6L_kBqgjP1TuXioHPmzO5Lwcw-1mpMZ2fPJ3oaJR0hheuH-yiFIRdrfWB7N91ALT3IeIPaQpZ9VYIm8nnvS3ZqmNDI6WMoNR",
   cover: "https://lh3.googleusercontent.com/aida-public/AB6AXuA8UKVDZdM2AnKRXXyraFnR5cShhBYGaVCBO3iqWvaXZH0_JqTdY52Ms-iWs6aDdfLIZoQNOXRFoP3-yCm2WRhicNlRDjljtdJ8ruYbqlKKt6LWICEoWQecygjMi9S7i95xQZGh0HSXklrs-JlsuyNUUYGpUP4KGIKzEC_XMS5GiuvQyF1gJs_CNizLMenU3YBPHh1Wo1QeMMy78_E6dgCLRtLk-cl6kMkDTCu-QNBlPcKLRnry8ILyvt0g9ayuI-8UzSsRLvDyoYcR",
   bio: "Digital Artist & Creative Strategist. Exploring the intersection of human connection and digital ecosystems. 🎨✨",
@@ -17,6 +18,7 @@ export const MOCK_USERS: UserProfile[] = [
   {
     id: "u2",
     name: "Sarah Miller",
+    username: "sarahmiller",
     avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBxXdOWCb8XorSt5V-MlAZxbCjBs2Yua9rJ9uUJ9cbspwZFiOEUypu1a_sdO7g1PptcyA6Y4JkSnPpHE1KfvD5crhGFKO_I5QxD9bbMtGHuieKKM_eGlVgHC8f9BvColwSKeyKezgfIjz4MplV-XtLQskL3e56hxZ285VGgPT8BH2Unry8vU3GKMJTBIprVbTEi80Ia78I4PyRE6WlOT2rrH_AcDiqWtcgJEPVdDUm0NBBsXR0BgEFa4-y6n8R1a8cyoNTyhDh5nJC6",
     cover: "https://picsum.photos/seed/sarah/1200/400",
     bio: "Creative Director & Brand Strategist. Passionate about minimal design and storytelling.",
@@ -29,6 +31,7 @@ export const MOCK_USERS: UserProfile[] = [
   {
     id: "u3",
     name: "Marcus Wright",
+    username: "marcuswright",
     avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDMVk0sa-PsPFpyZRwefgtYJ6kUqqir6dA17YrLHhFDud5Gw5eGMt_uPYque2UHvuwF-HDo2-MssfV5U0JQa0PnyuKZ6LlHKFZygCUWOOgl44f0XLlWKrVo4g7Md97Ecx04HHrDoCnBoA9stsCOOGImXLHMrPd9cxDP9Wj3u2HFwneSVISOdOtxbi_xkPxni8J4j5Y3O-Aj9mkqCouF5U55UjKVxQhOI1kTeXP5768SGE6h33rYCrvAq6ij2XWSx04xltNYpo2pcNTb",
     cover: "https://picsum.photos/seed/marcus/1200/400",
     bio: "Urban Photographer capturing the soul of the city. 🏙️📸",

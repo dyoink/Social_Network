@@ -1,4 +1,6 @@
-export type View = 'newsfeed' | 'profile' | 'messenger' | 'search' | 'notifications' | 'admin';
+import type { UserBadgeDto } from './api/api-generated';
+
+export type View = 'newsfeed' | 'profile' | 'messenger' | 'search' | 'notifications' | 'admin' | 'hashtag' | 'settings' | 'reels';
 
 export interface Post {
   id: string;
@@ -19,6 +21,7 @@ export interface Post {
 
 export interface UserProfile {
   id: string;
+  username: string;
   name: string;
   avatar: string;
   cover: string;
@@ -28,4 +31,9 @@ export interface UserProfile {
   posts: string;
   role: string;
   isFollowing?: boolean;
+  createdAt?: string;
+  dateOfBirth?: string;
+  hometown?: string;
+  gender?: string;
+  displayedBadge?: UserBadgeDto | null;
 }

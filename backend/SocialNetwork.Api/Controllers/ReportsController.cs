@@ -22,7 +22,8 @@ public class ReportsController(IReportService reportService) : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(ApiResponse.Fail("Dữ liệu không hợp lệ."));
 
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+            return Unauthorized(ApiResponse.Fail("Không xác định được người dùng."));
 
         try
         {

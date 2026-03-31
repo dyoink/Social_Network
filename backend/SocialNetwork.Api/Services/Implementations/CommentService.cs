@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SocialNetwork.Api.Common;
 using SocialNetwork.Api.Data;
+using SocialNetwork.Api.DTOs.Badge;
 using SocialNetwork.Api.DTOs.Comment;
 using SocialNetwork.Api.DTOs.User;
 using SocialNetwork.Api.Entities;
@@ -12,11 +13,13 @@ namespace SocialNetwork.Api.Services.Implementations
     {
         private readonly SocialDbContext _context;
         private readonly ILogger<CommentService> _logger;
+        private readonly IBadgeService _badgeService;
 
-        public CommentService(SocialDbContext context, ILogger<CommentService> logger)
+        public CommentService(SocialDbContext context, ILogger<CommentService> logger, IBadgeService badgeService)
         {
             _context = context;
             _logger = logger;
+            _badgeService = badgeService;
         }
 
         // ─── GetByPost ─────────────────────────────────────────────────────────
@@ -47,6 +50,16 @@ namespace SocialNetwork.Api.Services.Implementations
                 .ToDictionaryAsync(x => x.ParentId, x => x.Count);
 
             var items = comments.Select(c => MapToDto(c, replyCounts.GetValueOrDefault(c.Id, 0))).ToList();
+
+            // Batch fetch displayed badges for comment authors
+            var authorIds = comments.Select(c => c.UserId).Distinct();
+            var badgeMap = await _badgeService.GetDisplayedBadgesForUsersAsync(authorIds);
+            foreach (var item in items)
+            {
+                if (item.User is not null && badgeMap.TryGetValue(item.User.Id, out var badge))
+                    item.User.DisplayedBadge = badge;
+            }
+
             return PagedResult<CommentDto>.Create(items, total, page, pageSize);
         }
 
@@ -134,7 +147,13 @@ namespace SocialNetwork.Api.Services.Implementations
             _logger.LogInformation("User {UserId} comment bài {PostId} (ParentId: {ParentId})",
                 userId, dto.PostId, dto.ParentId);
 
-            return MapToDto(comment, repliesCount: 0);
+            // Kiểm tra badge sau khi comment
+            try { await _badgeService.CheckAndAwardBadgesAsync(userId); } catch (Exception ex) { _logger.LogWarning(ex, "Badge check failed for user {UserId}", userId); }
+
+            var result = MapToDto(comment, repliesCount: 0);
+            var displayedBadge = await _badgeService.GetDisplayedBadgeAsync(userId);
+            if (result.User is not null) result.User.DisplayedBadge = displayedBadge;
+            return result;
         }
 
         // ─── Delete ────────────────────────────────────────────────────────────

@@ -135,12 +135,71 @@ Hoặc dùng API admin (nếu đã là Admin):
 
 2. Đăng nhập lại, click vào icon **Shield** (🛡️) trên thanh navigation trên cùng.
 
-3. Admin Panel bao gồm 5 tab:
-   - **Dashboard** — Thống kê tổng quan + biểu đồ tăng trưởng (Area Chart), hoạt động hôm nay (Bar Chart), phân bố nội dung (Pie Chart)
+3. Admin Panel bao gồm các tab:
+   - **Dashboard** — Thống kê tổng quan + biểu đồ tăng trưởng (Area Chart), hoạt động hôm nay (Bar Chart), phân bố nội dung (Pie Chart), bảng xếp hạng user hoạt động nhất
    - **Users** — Quản lý tài khoản (ban/unban, đổi role, reset mật khẩu, xem chi tiết, lọc theo trạng thái)
    - **Posts** — Quản lý bài viết (xem chi tiết + ảnh, xóa)
    - **Comments** — Quản lý bình luận (tìm kiếm, lọc theo bài viết, xóa)
-   - **Reports** — Xử lý báo cáo vi phạm (resolve, xóa)
+   - **Reports** — Xử lý báo cáo vi phạm (resolve, xóa bài vi phạm trực tiếp)
+   - **Seed Data** — Tạo dữ liệu ngẫu nhiên để test (xem hướng dẫn bên dưới)
+
+---
+
+## Seed Data (Tạo dữ liệu ngẫu nhiên để test)
+
+Admin Panel có tính năng sinh hàng chục/trăm user, post, comment, reaction, follow, message và story ngẫu nhiên — giúp test pagination, trending hashtags, leaderboard và newsfeed mà không cần nhập tay.
+
+### Cách sử dụng
+
+1. Vào **Admin Panel** → tab **🌱 Seed Data**
+2. Điều chỉnh các thông số bằng slider:
+
+   | Thông số | Phạm vi | Mặc định | Mô tả |
+   |---|---|---|---|
+   | **Số users** | 1 – 200 | 20 | Số fake user sẽ được tạo |
+   | **Posts / user** | 0 – 20 | 5 | Số bài viết mỗi user đăng |
+   | **Comments / post** | 0 – 10 | 3 | Số bình luận mỗi bài viết |
+   | **Follows / user** | 0 – 30 | 10 | Mỗi user follow bao nhiêu người khác |
+   | **Reactions / post** | 0 – 50 | 15 | Số like/reaction ngẫu nhiên mỗi bài |
+   | Tạo Messages | checkbox | ✅ | Tạo conversations + tin nhắn giữa các cặp user |
+   | Tạo Stories | checkbox | ✅ | Tạo stories ngẫu nhiên |
+
+3. Giao diện hiển thị **ước tính số records** sẽ được tạo (cảnh báo nếu > 5.000).
+4. Bấm **🌱 Bắt đầu Seed** → đợi vài giây → xem kết quả.
+
+### Thông tin về seeded data
+
+- **Username** của tất cả fake user đều bắt đầu bằng `seed_` (ví dụ: `seed_a3f7c9b2d1e4`)
+- **Password** cố định: `Seed@1234` — có thể đăng nhập vào tài khoản test bất kỳ
+- **Avatar** lấy từ `picsum.photos` (ảnh đẹp, không cần upload)
+- `CreatedAt` trải ngẫu nhiên trong 365 ngày → biểu đồ growth chart trông tự nhiên
+- Post content bao gồm hashtag ngẫu nhiên → trending hashtags hoạt động ngay
+
+### Cleanup — Xóa toàn bộ seeded data
+
+Bấm **🗑 Xóa toàn bộ Seeded Data** (có confirmation dialog).
+
+- Xoá cascade theo đúng thứ tự FK: stories → messages → notifications → reactions → comments → posts → follows → users
+- **Không ảnh hưởng** đến real users, bài viết, hay dữ liệu admin
+- Dựa trên cờ `is_seeded = true` trên bảng `users`
+
+### Gọi API trực tiếp (tùy chọn)
+
+```bash
+# Tạo seed data
+curl -X POST http://localhost:5204/api/admin/seed \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"userCount":50,"postsPerUser":5,"commentsPerPost":3,"followsPerUser":10,"reactionsPerPost":15,"includeMessages":true,"includeStories":true}'
+
+# Kiểm tra trạng thái
+curl http://localhost:5204/api/admin/seed/status \
+  -H "Authorization: Bearer <admin_token>"
+
+# Xóa toàn bộ seeded data
+curl -X DELETE http://localhost:5204/api/admin/seed \
+  -H "Authorization: Bearer <admin_token>"
+```
 
 ---
 

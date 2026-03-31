@@ -1,27 +1,42 @@
 import { useState, useEffect } from 'react';
-import { Users, FileText, MessageSquare, Flag, TrendingUp, RefreshCw, Heart, UserPlus, Activity } from 'lucide-react';
+import { Users, FileText, MessageSquare, Flag, TrendingUp, RefreshCw, Heart, UserPlus, Activity, Trophy, Medal } from 'lucide-react';
 import { getSocialNetworkApiV1, type AdminStatsDto, type GrowthChartDto } from '../../../api/api-generated';
+import api from '../../../api/axios';
 import StatCard from '../../admin/StatCard';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+interface LeaderboardEntry {
+  userId: number;
+  username: string;
+  fullName?: string | null;
+  avatarUrl?: string | null;
+  postsCount: number;
+  likesReceived: number;
+  commentsCount: number;
+  score: number;
+}
+
 const AdminDashboardView = () => {
-  const api = getSocialNetworkApiV1();
+  const apiGen = getSocialNetworkApiV1();
   const [stats, setStats] = useState<AdminStatsDto | null>(null);
   const [chart, setChart] = useState<GrowthChartDto | null>(null);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartDays, setChartDays] = useState(30);
 
   const fetchAll = () => {
     setLoading(true);
     Promise.all([
-      api.getApiAdminStats(),
-      api.getApiAdminGrowthChart({ days: chartDays }),
+      apiGen.getApiAdminStats(),
+      apiGen.getApiAdminGrowthChart({ days: chartDays }),
+      api.get<{ success: boolean; data: LeaderboardEntry[] }>('/api/Admin/leaderboard', { params: { limit: 10 } }),
     ])
-      .then(([statsRes, chartRes]) => {
+      .then(([statsRes, chartRes, leaderboardRes]) => {
         if (statsRes.success && statsRes.data) setStats(statsRes.data);
         if (chartRes.success && chartRes.data) setChart(chartRes.data);
+        if (leaderboardRes.data?.success) setLeaderboard(leaderboardRes.data.data);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -182,6 +197,54 @@ const AdminDashboardView = () => {
                 <div className="flex justify-between text-sm"><span className="text-outline">Chờ xử lý</span><span className={`font-semibold ${Number(stats.pendingReports ?? 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>{stats.pendingReports ?? 0}</span></div>
               </div>
             </div>
+          </div>
+
+          {/* Leaderboard */}
+          <div className="bg-surface rounded-2xl p-6 shadow-sm border border-outline-variant">
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="w-5 h-5 text-yellow-500" />
+              <h3 className="text-lg font-semibold text-on-surface">Bảng xếp hạng hoạt động</h3>
+            </div>
+            {leaderboard.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-outline border-b border-outline-variant">
+                      <th className="text-left py-2 pr-2">#</th>
+                      <th className="text-left py-2">Người dùng</th>
+                      <th className="text-center py-2">Bài viết</th>
+                      <th className="text-center py-2">Lượt thích</th>
+                      <th className="text-center py-2">Bình luận</th>
+                      <th className="text-center py-2">Điểm</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboard.map((entry, i) => (
+                      <tr key={entry.userId} className="border-b border-outline-variant/50 hover:bg-surface-container-low/50">
+                        <td className="py-2 pr-2">
+                          {i < 3 ? <Medal className={`w-5 h-5 ${i === 0 ? 'text-yellow-500' : i === 1 ? 'text-gray-400' : 'text-amber-600'}`} /> : <span className="text-outline ml-0.5">{i + 1}</span>}
+                        </td>
+                        <td className="py-2">
+                          <div className="flex items-center gap-2">
+                            {entry.avatarUrl ? <img src={entry.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover" /> : <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">{(entry.fullName || entry.username)?.[0]?.toUpperCase()}</div>}
+                            <div>
+                              <p className="font-medium text-on-surface leading-tight">{entry.fullName || entry.username}</p>
+                              <p className="text-xs text-outline">@{entry.username}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="text-center py-2 text-on-surface-variant">{entry.postsCount}</td>
+                        <td className="text-center py-2 text-on-surface-variant">{entry.likesReceived}</td>
+                        <td className="text-center py-2 text-on-surface-variant">{entry.commentsCount}</td>
+                        <td className="text-center py-2 font-semibold text-primary">{entry.score}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-outline text-center py-6">Chưa có dữ liệu.</p>
+            )}
           </div>
         </>
       ) : (

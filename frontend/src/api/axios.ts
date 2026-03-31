@@ -3,9 +3,18 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:5204/',
   timeout: 10_000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+});
+
+/**
+ * Tự động set Content-Type phù hợp.
+ * FormData → để browser tự set multipart/form-data (kèm boundary).
+ * Còn lại → application/json.
+ */
+api.interceptors.request.use((config) => {
+  if (!(config.data instanceof FormData)) {
+    config.headers['Content-Type'] = config.headers['Content-Type'] ?? 'application/json';
+  }
+  return config;
 });
 
 /**
@@ -43,5 +52,17 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+import type { ApiResponseOfUploadResultDto } from './api-generated';
+
+/**
+ * Upload ảnh qua FormData — bypass Orval generated code (IFormFile mapping lỗi).
+ */
+export async function uploadImage(file: File): Promise<ApiResponseOfUploadResultDto> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post<ApiResponseOfUploadResultDto>('/api/Upload/image', formData);
+  return res.data;
+}
 
 export default api;

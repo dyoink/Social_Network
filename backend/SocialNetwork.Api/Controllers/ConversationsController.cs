@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using SocialNetwork.Api.Common;
+using SocialNetwork.Api.Data;
 using SocialNetwork.Api.DTOs.Message;
+using SocialNetwork.Api.Hubs;
 using SocialNetwork.Api.Services.Interfaces;
 using System.Security.Claims;
 
@@ -13,14 +17,21 @@ namespace SocialNetwork.Api.Controllers
     public class ConversationsController : ControllerBase
     {
         private readonly IMessageService _messageService;
+        private readonly IHubContext<ChatHub> _chatHub;
+        private readonly SocialDbContext _db;
 
-        public ConversationsController(IMessageService messageService)
+        public ConversationsController(
+            IMessageService messageService,
+            IHubContext<ChatHub> chatHub,
+            SocialDbContext db)
         {
             _messageService = messageService;
+            _chatHub = chatHub;
+            _db = db;
         }
 
         private int CurrentUserId =>
-            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
         // ─── GET /api/conversations ────────────────────────────────────────────
 
@@ -70,6 +81,23 @@ namespace SocialNetwork.Api.Controllers
             // Đảm bảo ConversationId trong body khớp với route
             dto.ConversationId = id;
             var message = await _messageService.SendMessageAsync(CurrentUserId, dto);
+
+            // Broadcast qua SignalR cho tất cả clients trong conversation group
+            await _chatHub.Clients.Group($"conv_{id}")
+                .SendAsync("ReceiveMessage", message);
+
+            // Gửi cập nhật conversation cho các participant khác (sidebar)
+            var participantIds = await _db.ConversationParticipants
+                .Where(cp => cp.ConversationId == id && cp.UserId != CurrentUserId)
+                .Select(cp => cp.UserId)
+                .ToListAsync();
+
+            foreach (var userId in participantIds)
+            {
+                await _chatHub.Clients.Group($"user_{userId}")
+                    .SendAsync("ConversationUpdated", new { conversationId = id, lastMessage = message });
+            }
+
             return StatusCode(201, ApiResponse<MessageDto>.Ok(message, "Đã gửi tin nhắn."));
         }
 
