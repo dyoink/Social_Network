@@ -38,12 +38,26 @@ const TopNav = ({ currentView, setView, onProfileClick, onLogout, user }: TopNav
       setMsgCount(prev => prev + 1);
     };
 
-    notifConn.on('ReceiveNotification', onReceiveNotification);
-    chatConn.on('ConversationUpdated', onConversationUpdated);
+    // Lắng nghe event local để giảm count khi đọc
+    const onNotificationRead = (e: any) => {
+      const { all } = e.detail || {};
+      if (all) setNotifCount(0);
+      else setNotifCount(prev => Math.max(0, prev - 1));
+    };
+    const onMessageRead = (e: any) => {
+      const { all } = e.detail || {};
+      if (all) setMsgCount(0);
+      else setMsgCount(prev => Math.max(0, prev - 1));
+    };
+
+    window.addEventListener('app:notification-read', onNotificationRead);
+    window.addEventListener('app:message-read', onMessageRead);
 
     return () => {
       notifConn.off('ReceiveNotification', onReceiveNotification);
       chatConn.off('ConversationUpdated', onConversationUpdated);
+      window.removeEventListener('app:notification-read', onNotificationRead);
+      window.removeEventListener('app:message-read', onMessageRead);
     };
   }, [user]);
 

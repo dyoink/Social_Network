@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
 import { getPokeConnection } from '../../api/signalr';
+import * as signalR from '@microsoft/signalr';
 
 // Các loại poke với emoji + label
 const POKE_MAP: Record<string, { emoji: string; label: string; color: string }> = {
@@ -80,6 +81,12 @@ export default function PokeOverlay() {
     };
 
     conn.on('ReceivePoke', handler);
+
+    // Đảm bảo connection đã started để nhận được event
+    if (conn.state === signalR.HubConnectionState.Disconnected) {
+      conn.start().catch(err => console.error('[PokeOverlay] Failed to start connection:', err));
+    }
+
     return () => {
       conn.off('ReceivePoke', handler);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);

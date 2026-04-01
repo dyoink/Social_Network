@@ -161,6 +161,20 @@ public class AdminService(SocialDbContext db) : IAdminService
         await db.SaveChangesAsync();
     }
 
+    public async Task BulkBanUsersAsync(List<int> userIds, bool ban)
+    {
+        await db.Users
+            .Where(u => userIds.Contains(u.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.IsActive, !ban));
+    }
+
+    public async Task BulkDeleteUsersAsync(List<int> userIds)
+    {
+        var users = await db.Users.Where(u => userIds.Contains(u.Id)).ToListAsync();
+        db.Users.RemoveRange(users);
+        await db.SaveChangesAsync();
+    }
+
     public async Task<PagedResult<AdminPostDto>> GetPostsAsync(string? q, int page, int pageSize)
     {
         var query = db.Posts.AsQueryable();
@@ -196,6 +210,13 @@ public class AdminService(SocialDbContext db) : IAdminService
         var post = await db.Posts.FindAsync(postId)
             ?? throw new KeyNotFoundException("Không tìm thấy bài viết.");
         db.Posts.Remove(post);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task BulkDeletePostsAsync(List<int> postIds)
+    {
+        var posts = await db.Posts.Where(p => postIds.Contains(p.Id)).ToListAsync();
+        db.Posts.RemoveRange(posts);
         await db.SaveChangesAsync();
     }
 
@@ -241,6 +262,13 @@ public class AdminService(SocialDbContext db) : IAdminService
         await db.SaveChangesAsync();
     }
 
+    public async Task BulkDeleteCommentsAsync(List<int> commentIds)
+    {
+        var comments = await db.Comments.Where(c => commentIds.Contains(c.Id)).ToListAsync();
+        db.Comments.RemoveRange(comments);
+        await db.SaveChangesAsync();
+    }
+
     public async Task<PagedResult<ReportDto>> GetReportsAsync(string? status, int page, int pageSize)
     {
         var query = db.Reports.AsQueryable();
@@ -283,11 +311,27 @@ public class AdminService(SocialDbContext db) : IAdminService
                 .SetProperty(r => r.ResolvedAt, DateTime.UtcNow));
     }
 
+    public async Task BulkResolveReportsAsync(List<int> reportIds)
+    {
+        await db.Reports
+            .Where(r => reportIds.Contains(r.Id))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(r => r.Status, "Resolved")
+                .SetProperty(r => r.ResolvedAt, DateTime.UtcNow));
+    }
+
     public async Task DeleteReportAsync(int reportId)
     {
         var report = await db.Reports.FindAsync(reportId)
             ?? throw new KeyNotFoundException("Không tìm thấy báo cáo.");
         db.Reports.Remove(report);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task BulkDeleteReportsAsync(List<int> reportIds)
+    {
+        var reports = await db.Reports.Where(r => reportIds.Contains(r.Id)).ToListAsync();
+        db.Reports.RemoveRange(reports);
         await db.SaveChangesAsync();
     }
 

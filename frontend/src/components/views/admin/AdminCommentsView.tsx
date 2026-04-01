@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Trash2, Loader, ChevronLeft, ChevronRight, Reply } from 'lucide-react';
+import { Search, Trash2, Loader, Reply } from 'lucide-react';
 import { getSocialNetworkApiV1, type AdminCommentDto } from '../../../api/api-generated';
 import { timeAgo } from '../../../utils/time';
 import toast from 'react-hot-toast';
+import Pagination from '../../ui/Pagination';
 
 const AdminCommentsView = () => {
   const api = getSocialNetworkApiV1();
@@ -12,6 +13,8 @@ const AdminCommentsView = () => {
   const [postIdFilter, setPostIdFilter] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isBulkLoading, setIsBulkLoading] = useState(false);
   const [actionId, setActionId] = useState<number | null>(null);
   const pageSize = 20;
 
@@ -22,6 +25,7 @@ const AdminCommentsView = () => {
         if (res.success && res.data) {
           setComments(res.data.items ?? []);
           setTotal(Number(res.data.totalCount ?? 0));
+          setSelectedIds([]);
         }
       })
       .catch(console.error)
@@ -31,6 +35,35 @@ const AdminCommentsView = () => {
   useEffect(() => { fetchComments(); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = () => { setPage(1); fetchComments(q, postIdFilter, 1); };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === comments.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(comments.map(c => c.id!).filter(Boolean));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Xóa vĩnh viễn ${selectedIds.length} bình luận đã chọn? Hành động này không thể hoàn tác.`)) return;
+    setIsBulkLoading(true);
+    try {
+      await api.deleteApiAdminCommentsBulkDelete(selectedIds);
+      setComments(prev => prev.filter(c => !selectedIds.includes(c.id!)));
+      setTotal(t => t - selectedIds.length);
+      toast.success(`Đã xóa ${selectedIds.length} bình luận`);
+      setSelectedIds([]);
+    } catch {
+      toast.error('Xóa hàng loạt thất bại');
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
 
   const handleDelete = async (comment: AdminCommentDto) => {
     if (!confirm(`Xóa bình luận của @${comment.authorUsername}?`)) return;
@@ -69,6 +102,28 @@ const AdminCommentsView = () => {
         <button onClick={handleSearch} className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90">Tìm kiếm</button>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between px-6 py-4 bg-primary/5 border border-primary/20 rounded-2xl animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-bold text-primary">Đã chọn {selectedIds.length} bình luận</span>
+            <button onClick={() => setSelectedIds([])} className="text-xs text-outline hover:underline">Hủy chọn</button>
+          </div>
+          <div className="flex items-center gap-2">
+            {isBulkLoading ? (
+              <Loader className="w-5 h-5 animate-spin text-primary" />
+            ) : (
+              <button
+                onClick={handleBulkDelete}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Xóa vĩnh viễn
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/10 overflow-hidden overflow-x-auto">
         {loading ? (
           <div className="flex justify-center py-16"><Loader className="w-6 h-6 animate-spin text-primary" /></div>
@@ -78,7 +133,15 @@ const AdminCommentsView = () => {
           <table className="w-full text-sm">
             <thead className="bg-surface-container-low border-b border-outline-variant/10">
               <tr>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Tác giả</th>
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                    checked={comments.length > 0 && selectedIds.length === comments.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <th className="text-left px-2 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Tác giả</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Nội dung</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Bài viết gốc</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Loại</th>
@@ -88,8 +151,16 @@ const AdminCommentsView = () => {
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
               {comments.map(comment => (
-                <tr key={comment.id} className="hover:bg-surface-container-low/50 transition-colors">
+                <tr key={comment.id} className={`hover:bg-surface-container-low/50 transition-colors ${selectedIds.includes(comment.id!) ? 'bg-primary/5' : ''}`}>
                   <td className="px-6 py-4">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                      checked={selectedIds.includes(comment.id!)}
+                      onChange={() => toggleSelect(comment.id!)}
+                    />
+                  </td>
+                  <td className="px-2 py-4">
                     <div className="flex items-center gap-2">
                       <img src={comment.authorAvatarUrl || `https://picsum.photos/seed/${comment.id}/32/32`} alt="" className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" />
                       <span className="font-medium text-on-surface-variant">@{comment.authorUsername}</span>
@@ -123,13 +194,12 @@ const AdminCommentsView = () => {
           </table>
         )}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-outline-variant/10">
-            <p className="text-sm text-outline">Trang {page} / {totalPages} ({total} kết quả)</p>
-            <div className="flex gap-2">
-              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-2 rounded-lg hover:bg-surface-container disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button>
-              <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-2 rounded-lg hover:bg-surface-container disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalCount={total}
+            onPageChange={setPage}
+          />
         )}
       </div>
     </div>

@@ -370,6 +370,20 @@ const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPos
         </div>
       )}
 
+      {post.videoUrl && (
+        <div className="px-2">
+          <div className="rounded-lg overflow-hidden max-h-[500px]">
+            <video
+              src={post.videoUrl}
+              className="w-full h-full object-contain bg-black"
+              controls
+              playsInline
+              preload="metadata"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="p-6">
         {/* Stats row */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-surface-container-low">

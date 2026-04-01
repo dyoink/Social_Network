@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X } from 'lucide-react';
+import { X, Loader } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getPokeConnection } from '../../api/signalr';
+import * as signalR from '@microsoft/signalr';
 
 const POKE_TYPES = [
   { type: 'debt',  emoji: '💸', label: 'Đòi nợ',             desc: 'Nhắc nhở nợ nần!' },
@@ -26,12 +27,36 @@ export default function PokeModal({ targetUserId, targetName, isOpen, onClose }:
     setSending(true);
     try {
       const conn = getPokeConnection();
+      // Đảm bảo connection đã started trước khi invoke
+      if (conn.state === signalR.HubConnectionState.Disconnected) {
+        await conn.start();
+      }
+      // Đợi connection sẵn sàng nếu đang reconnecting
+      if (conn.state !== signalR.HubConnectionState.Connected) {
+        // Chờ tối đa 3s cho connection sẵn sàng
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('timeout')), 3000);
+          const check = () => {
+            if (conn.state === signalR.HubConnectionState.Connected) {
+              clearTimeout(timeout);
+              resolve();
+            } else if (conn.state === signalR.HubConnectionState.Disconnected) {
+              clearTimeout(timeout);
+              reject(new Error('disconnected'));
+            } else {
+              setTimeout(check, 100);
+            }
+          };
+          check();
+        });
+      }
       await conn.invoke('Poke', targetUserId, pokeType);
       const info = POKE_TYPES.find(p => p.type === pokeType);
       toast.success(`Đã ${info?.label.toLowerCase() ?? 'chọc'} ${targetName}!`);
       onClose();
-    } catch {
-      toast.error('Không thể gửi poke, thử lại sau.');
+    } catch (err) {
+      console.error('[Poke] Error:', err);
+      toast.error('Không thể gửi poke. Kiểm tra kết nối mạng và thử lại.');
     } finally {
       setSending(false);
     }
@@ -73,7 +98,11 @@ export default function PokeModal({ targetUserId, targetName, isOpen, onClose }:
                   disabled={sending}
                   className="flex flex-col items-center gap-2 p-5 rounded-xl bg-surface-container-low hover:bg-surface-container transition-all hover:scale-105 active:scale-95 disabled:opacity-60 group"
                 >
-                  <span className="text-4xl group-hover:scale-125 transition-transform">{poke.emoji}</span>
+                  {sending ? (
+                    <Loader className="w-8 h-8 animate-spin text-primary" />
+                  ) : (
+                    <span className="text-4xl group-hover:scale-125 transition-transform">{poke.emoji}</span>
+                  )}
                   <span className="font-headline font-bold text-sm text-on-surface">{poke.label}</span>
                   <span className="text-xs text-outline">{poke.desc}</span>
                 </button>

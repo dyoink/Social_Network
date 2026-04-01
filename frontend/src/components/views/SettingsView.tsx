@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { getSocialNetworkApiV1 } from '../../api/api-generated';
 import useAuthStore from '../../store/authStore';
 import useThemeStore from '../../store/themeStore';
-import { getGeminiApiKey, setGeminiApiKey, removeGeminiApiKey } from '../../api/gemini';
+import { getGeminiApiKey, setGeminiApiKey, removeGeminiApiKey, testGeminiApiKey, getGeminiModel, setGeminiModel, GEMINI_MODELS, type GeminiModelId } from '../../api/gemini';
 
 interface SettingsViewProps {
   onLogout: () => void;
@@ -14,17 +14,46 @@ interface SettingsViewProps {
 const GeminiKeySection = () => {
   const [apiKey, setApiKey] = useState(getGeminiApiKey() ?? '');
   const [showKey, setShowKey] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [selectedModel, setSelectedModel] = useState<GeminiModelId>(getGeminiModel());
   const hasKey = !!getGeminiApiKey();
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!apiKey.trim()) { toast.error('Vui lòng nhập API Key.'); return; }
     setGeminiApiKey(apiKey.trim());
-    toast.success('Đã lưu Gemini API Key.');
+    toast.success('Đã lưu Gemini API Key. Đang kiểm tra...');
+    // Tự động test sau khi lưu
+    setTesting(true);
+    setTestResult(null);
+    const result = await testGeminiApiKey(apiKey.trim());
+    setTestResult(result);
+    setTesting(false);
+    if (result.ok) {
+      toast.success('API Key hợp lệ! Bạn có thể dùng AI viết bài.');
+    } else {
+      toast.error(result.error ?? 'API Key không hợp lệ.');
+    }
+  };
+
+  const handleTest = async () => {
+    if (!apiKey.trim()) { toast.error('Vui lòng nhập API Key trước.'); return; }
+    setTesting(true);
+    setTestResult(null);
+    const result = await testGeminiApiKey(apiKey.trim());
+    setTestResult(result);
+    setTesting(false);
+    if (result.ok) {
+      toast.success('API Key hợp lệ!');
+    } else {
+      toast.error(result.error ?? 'API Key không hợp lệ.');
+    }
   };
 
   const handleRemove = () => {
     removeGeminiApiKey();
     setApiKey('');
+    setTestResult(null);
     toast.success('Đã xóa API Key.');
   };
 
@@ -37,18 +66,30 @@ const GeminiKeySection = () => {
       <p className="text-xs text-outline mb-4">
         Thêm Google Gemini API Key để dùng tính năng ✨ Viết bằng AI khi tạo bài viết.
         Key được lưu trên trình duyệt của bạn, không gửi lên server.
-        Lấy key tại{' '}
-        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">
-          aistudio.google.com/apikey
-        </a>
       </p>
 
-      <div className="flex gap-2">
+      {/* Hướng dẫn lấy key */}
+      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200/40 dark:border-blue-500/20">
+        <p className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">📋 Cách lấy API Key:</p>
+        <ol className="text-xs text-blue-600 dark:text-blue-400 list-decimal list-inside space-y-0.5">
+          <li>Truy cập{' '}
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">
+              aistudio.google.com/apikey
+            </a>
+          </li>
+          <li>Đăng nhập tài khoản Google</li>
+          <li>Nhấn "Create API Key" → chọn project → Copy key</li>
+          <li>Dán key vào ô bên dưới → Nhấn Lưu</li>
+        </ol>
+      </div>
+
+      {/* API Key input */}
+      <div className="flex gap-2 mb-2">
         <div className="relative flex-1">
           <input
             type={showKey ? 'text' : 'password'}
             value={apiKey}
-            onChange={e => setApiKey(e.target.value)}
+            onChange={e => { setApiKey(e.target.value); setTestResult(null); }}
             placeholder="AIzaSy..."
             className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-2.5 px-4 pr-10 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none font-mono"
           />
@@ -62,9 +103,17 @@ const GeminiKeySection = () => {
         </div>
         <button
           onClick={handleSave}
-          className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:brightness-110 transition-all flex items-center gap-1.5"
+          disabled={testing}
+          className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:brightness-110 transition-all flex items-center gap-1.5 disabled:opacity-60"
         >
-          <Check className="w-4 h-4" /> Lưu
+          {testing ? <Loader className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Lưu
+        </button>
+        <button
+          onClick={handleTest}
+          disabled={testing || !apiKey.trim()}
+          className="px-3 py-2.5 bg-purple-500 text-white rounded-xl text-sm font-bold hover:bg-purple-600 transition-colors flex items-center gap-1.5 disabled:opacity-60"
+        >
+          {testing ? <Loader className="w-4 h-4 animate-spin" /> : <Bug className="w-4 h-4" />} Test
         </button>
         {hasKey && (
           <button
@@ -76,11 +125,37 @@ const GeminiKeySection = () => {
         )}
       </div>
 
-      {hasKey && (
+      {/* Test result */}
+      {testResult && (
+        <div className={`mt-2 text-xs font-semibold flex items-center gap-1 ${testResult.ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+          {testResult.ok ? (
+            <><Check className="w-3 h-3" /> API Key hợp lệ — sẵn sàng sử dụng!</>
+          ) : (
+            <><AlertCircle className="w-3 h-3" /> {testResult.error}</>
+          )}
+        </div>
+      )}
+
+      {hasKey && !testResult && (
         <p className="mt-2 text-xs text-green-600 dark:text-green-400 font-semibold flex items-center gap-1">
           <Check className="w-3 h-3" /> API Key đã được cấu hình
         </p>
       )}
+
+      {/* Model selection */}
+      <div className="mt-4 pt-4 border-t border-outline-variant/20">
+        <label className="text-sm font-bold text-on-surface mb-2 block">Model mặc định</label>
+        <select
+          className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-2.5 px-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none"
+          value={selectedModel}
+          onChange={e => { const m = e.target.value as GeminiModelId; setSelectedModel(m); setGeminiModel(m); toast.success(`Đã chọn model: ${GEMINI_MODELS.find(x => x.id === m)?.name}`); }}
+        >
+          {GEMINI_MODELS.map(m => (
+            <option key={m.id} value={m.id}>{m.name} — {m.desc}</option>
+          ))}
+        </select>
+        <p className="text-[10px] text-outline mt-1">Model có thể được thay đổi khi tạo bài viết.</p>
+      </div>
     </section>
   );
 };
@@ -155,12 +230,16 @@ const SettingsView = ({ onLogout }: SettingsViewProps) => {
           </div>
           <button
             onClick={toggleTheme}
-            className={`relative w-14 h-7 rounded-full transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-surface-container-high'
-              }`}
+            className={`relative w-14 h-7 rounded-full transition-colors ${
+              theme === 'dark' ? 'bg-primary' : 'bg-surface-container-high'
+            }`}
           >
             <span
-              className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${theme === 'dark' ? 'translate-x-7' : 'translate-x-0'
-                }`}
+              
+              className={`absolute top-0.5 down-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
+                theme === 'dark' ? 'translate-x-7' : 'translate-x-0'
+              }`}
+            
             />
           </button>
         </div>
@@ -245,8 +324,7 @@ const SettingsView = ({ onLogout }: SettingsViewProps) => {
                   onClick={() => toggleNotifPref(key)}
                   className={`relative w-14 h-7 rounded-full transition-colors ${enabled ? 'bg-primary' : 'bg-surface-container-high'}`}
                 >
-                  <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${enabled ? 'translate-x-7' : 'translate-x-0'}`}
-                  />
+                  <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${enabled ? 'translate-x-7' : 'translate-x-0.5'}`} />
                 </button>
               </div>
             );

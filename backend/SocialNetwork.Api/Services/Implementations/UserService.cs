@@ -122,13 +122,13 @@ namespace SocialNetwork.Api.Services.Implementations
                 .Select(f => f.Follower);
 
             var total = await query.CountAsync();
-            var items = await query
+            var users = await query
                 .OrderByDescending(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(u => MapToSummary(u))
                 .ToListAsync();
 
+            var items = await MapToSummaryListAsync(users, userId);
             return PagedResult<UserSummaryDto>.Create(items, total, page, pageSize);
         }
 
@@ -141,13 +141,13 @@ namespace SocialNetwork.Api.Services.Implementations
                 .Select(f => f.Following);
 
             var total = await query.CountAsync();
-            var items = await query
+            var users = await query
                 .OrderByDescending(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(u => MapToSummary(u))
                 .ToListAsync();
 
+            var items = await MapToSummaryListAsync(users, userId);
             return PagedResult<UserSummaryDto>.Create(items, total, page, pageSize);
         }
 
@@ -160,7 +160,7 @@ namespace SocialNetwork.Api.Services.Implementations
 
             var q = query.Trim().ToLower();
 
-            return await _context.Users
+            var users = await _context.Users
                 .Where(u =>
                     // Loại bản thân ra khỏi kết quả tìm kiếm
                     (!currentUserId.HasValue || u.Id != currentUserId.Value) &&
@@ -168,8 +168,9 @@ namespace SocialNetwork.Api.Services.Implementations
                      (u.FullName != null && u.FullName.ToLower().Contains(q))))
                 .OrderBy(u => u.Username)
                 .Take(20)
-                .Select(u => MapToSummary(u))
                 .ToListAsync();
+
+            return await MapToSummaryListAsync(users, currentUserId);
         }
 
         // ─── GetSuggestions ────────────────────────────────────────────────────
@@ -183,21 +184,69 @@ namespace SocialNetwork.Api.Services.Implementations
                 .ToHashSetAsync();
 
             // Đề xuất: chưa follow + không phải bản thân, sắp xếp theo số followers
-            return await _context.Users
+            var suggestionData = await _context.Users
                 .Where(u => u.Id != currentUserId && !alreadyFollowing.Contains(u.Id))
                 .Select(u => new
                 {
                     User = u,
-                    // Đếm followers để sắp xếp phổ biến nhất lên đầu
                     FollowerCount = _context.Follows.Count(f => f.FollowingId == u.Id)
                 })
                 .OrderByDescending(x => x.FollowerCount)
-                .Take(10)
-                .Select(x => MapToSummary(x.User))
+                .Take(20)
                 .ToListAsync();
+
+            var users = suggestionData.Select(x => x.User).ToList();
+            var result = await MapToSummaryListAsync(users, currentUserId);
+
+            // Gán lại FollowerCount đã tính ở trên (để tối ưu)
+            var countMap = suggestionData.ToDictionary(x => x.User.Id, x => x.FollowerCount);
+            foreach (var r in result)
+            {
+                if (countMap.TryGetValue(r.Id, out var c)) r.FollowersCount = c;
+            }
+
+            return result;
         }
 
         // ─── Helpers ───────────────────────────────────────────────────────────
+
+        private async Task<List<UserSummaryDto>> MapToSummaryListAsync(List<User> users, int? currentUserId)
+        {
+            if (users.Count == 0) return [];
+
+            var userIds = users.Select(u => u.Id).ToList();
+
+            // Check following status
+            HashSet<int> followingIds = [];
+            if (currentUserId.HasValue)
+            {
+                followingIds = (await _context.Follows
+                    .Where(f => f.FollowerId == currentUserId.Value && userIds.Contains(f.FollowingId))
+                    .Select(f => f.FollowingId)
+                    .ToListAsync()).ToHashSet();
+            }
+
+            // Batch fetch badges
+            var badgeMap = await _badgeService.GetDisplayedBadgesForUsersAsync(userIds);
+
+            // Batch fetch followers count (optional, but good for search/suggestions)
+            var followersCounts = await _context.Follows
+                .Where(f => userIds.Contains(f.FollowingId))
+                .GroupBy(f => f.FollowingId)
+                .Select(g => new { UserId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.UserId, x => x.Count);
+
+            return users.Select(u => new UserSummaryDto
+            {
+                Id             = u.Id,
+                Username       = u.Username,
+                FullName       = u.FullName,
+                AvatarUrl      = u.AvatarUrl,
+                IsFollowing    = followingIds.Contains(u.Id),
+                FollowersCount = followersCounts.GetValueOrDefault(u.Id, 0),
+                DisplayedBadge = badgeMap.GetValueOrDefault(u.Id)
+            }).ToList();
+        }
 
         /// <summary>
         /// Tổng hợp UserDto đầy đủ gồm followers/following/posts count và isFollowing.

@@ -182,6 +182,18 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
   // Tự động mở conversation với targetUserId (từ Profile "Nhắn tin")
   useEffect(() => {
     if (!targetUserId || targetUserId === currentUserId) return;
+    // Đợi conversation list load xong trước khi xử lý target
+    if (convLoading) return;
+
+    // Kiểm tra xem đã có conversation với target chưa
+    const existing = conversations.find(c =>
+      c.participants?.some(p => Number(p.id) === targetUserId)
+    );
+    if (existing) {
+      setActiveConvId(Number(existing.id));
+      return;
+    }
+
     api.postApiConversations({ targetUserId })
       .then(res => {
         if (res.success && res.data) {
@@ -195,19 +207,45 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
         }
       })
       .catch(console.error);
-  }, [targetUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [targetUserId, convLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Join/Leave SignalR group khi chuyển conversation
   useEffect(() => {
+    const chatConn = getChatConnection();
     const prev = prevConvRef.current;
-    if (prev !== null && prev !== activeConvId) {
-      chatConn.invoke('LeaveConversation', prev).catch(console.error);
-    }
-    if (activeConvId !== null) {
-      chatConn.invoke('JoinConversation', activeConvId).catch(console.error);
-    }
-    prevConvRef.current = activeConvId;
-  }, [activeConvId, chatConn]);
+
+    const manageGroups = async () => {
+      // Đảm bảo connection đã start trước khi invoke
+      if (chatConn.state !== 'Connected') {
+        // Nếu đang connecting hoặc disconnected, đợi một chút rồi thử lại
+        return;
+      }
+
+      try {
+        if (prev !== null && prev !== activeConvId) {
+          await chatConn.invoke('LeaveConversation', prev);
+        }
+        if (activeConvId !== null) {
+          await chatConn.invoke('JoinConversation', activeConvId);
+        }
+        prevConvRef.current = activeConvId;
+      } catch (err) {
+        console.error('[SignalR] Error managing groups:', err);
+      }
+    };
+
+    manageGroups();
+    
+    // Nếu connection chưa sẵn sàng, lắng nghe event onreconnected hoặc đợi state change
+    // Ở đây ta dùng interval đơn giản để retry nếu activeConvId thay đổi mà chưa join được
+    const timer = setInterval(() => {
+      if (chatConn.state === 'Connected' && prevConvRef.current !== activeConvId) {
+        manageGroups();
+      }
+    }, 2000);
+
+    return () => clearInterval(timer);
+  }, [activeConvId]);
 
   // Load messages khi chọn conversation
   useEffect(() => {
@@ -228,6 +266,12 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
       .finally(() => setMsgLoading(false));
 
     // Đánh dấu đã đọc
+    api.getApiConversationsUnreadCount().then(r => {
+      if (r.success && r.data) {
+        // Có thể lấy count mới từ API hoặc đơn giản là dispatch event để TopNav update
+        window.dispatchEvent(new CustomEvent('app:message-read', { detail: { id: activeConvId } }));
+      }
+    });
     api.putApiConversationsIdRead(activeConvId).catch(console.error);
     setConversations(prev =>
       prev.map(c => Number(c.id) === activeConvId ? { ...c, unreadCount: 0 } : c)
@@ -251,12 +295,19 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
     const content = newMessage.trim();
     if (!content || !activeConvId || sending) return;
     setSending(true);
+    
+    const chatConn = getChatConnection();
     try {
       // Gửi qua SignalR hub (hub tự lưu DB + broadcast)
-      await chatConn.invoke('SendMessage', activeConvId, content);
-      setNewMessage('');
-      chatConn.invoke('StopTyping', activeConvId).catch(() => {});
-    } catch {
+      if (chatConn.state === 'Connected') {
+        await chatConn.invoke('SendMessage', activeConvId, content);
+        setNewMessage('');
+        chatConn.invoke('StopTyping', activeConvId).catch(() => {});
+      } else {
+        throw new Error('SignalR not connected');
+      }
+    } catch (err) {
+      console.warn('[SignalR] Send failed, falling back to REST:', err);
       // Fallback sang REST nếu SignalR lỗi
       try {
         const res = await api.postApiConversationsIdMessages(activeConvId, { conversationId: activeConvId, content });

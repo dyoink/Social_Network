@@ -188,7 +188,12 @@ export default function App() {
                   {currentView === 'profile' && <ProfileView user={selectedUser ?? undefined} onCommentClick={setActiveCommentPost} onMessageClick={handleMessageUser} onHashtagClick={handleHashtagClick} />}
                   {currentView === 'messenger' && <MessengerView targetUserId={messengerTargetUserId} />}
                   {currentView === 'search' && <SearchView onCommentClick={setActiveCommentPost} onUserClick={handleViewProfile} onHashtagClick={handleHashtagClick} />}
-                  {currentView === 'notifications' && <NotificationsView />}
+                  {currentView === 'notifications' && (
+                    <NotificationsView 
+                      onPostClick={setActiveCommentPost} 
+                      onUserClick={handleViewProfile} 
+                    />
+                  )}
                   {currentView === 'hashtag' && activeHashtag && <HashtagView tag={activeHashtag} onBack={() => setView('newsfeed')} onCommentClick={setActiveCommentPost} onHashtagClick={handleHashtagClick} />}
                   {currentView === 'settings' && <SettingsView onLogout={handleLogout} />}
                   {currentView === 'reels' && <ReelView />}
@@ -215,6 +220,7 @@ export default function App() {
             isOpen={isCreateOpen}
             onClose={() => setIsCreateOpen(false)}
             onPostCreated={() => setFeedRefreshKey(k => k + 1)}
+            onNavigateSettings={() => { setIsCreateOpen(false); setView('settings'); }}
           />
 
           {/* Mobile Bottom Nav */}

@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Globe, Plus, Camera, UserPlus, Smile, MapPin, MoreHorizontal, Loader, AlertCircle, Search, Users, Lock, Sparkles } from 'lucide-react';
-import { generatePostContent, getGeminiApiKey } from '../../api/gemini';
+import { X, Globe, Plus, Camera, Video, UserPlus, Smile, MapPin, MoreHorizontal, Loader, AlertCircle, Search, Users, Lock, Sparkles, Settings, RotateCcw, Check } from 'lucide-react';
+import { generatePostContent, getGeminiApiKey, getGeminiModel, setGeminiModel, GEMINI_MODELS, type GeminiModelId } from '../../api/gemini';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'motion/react';
 import { getSocialNetworkApiV1, type PostDto } from '../../api/api-generated';
 import useAuthStore from '../../store/authStore';
 import ImageUpload from '../ui/ImageUpload';
+import { uploadVideo } from '../../api/storyApi';
 
 const EMOJI_LIST = [
   '😀','😂','😍','🥰','😎','🤩','😢','😡','🥺','😲','🤔','😴',
@@ -18,15 +19,20 @@ interface CreatePostModalProps {
   onClose: () => void;
   /** Callback nhận bài vừa tạo để prepend vào feed mà không cần refresh */
   onPostCreated?: (post: PostDto) => void;
+  /** Điều hướng sang trang Cài đặt (để nhập API Key) */
+  onNavigateSettings?: () => void;
 }
 
-const CreatePostModal = ({ isOpen, onClose, onPostCreated }: CreatePostModalProps) => {
+const CreatePostModal = ({ isOpen, onClose, onPostCreated, onNavigateSettings }: CreatePostModalProps) => {
   const api = getSocialNetworkApiV1();
   const { user } = useAuthStore();
 
   const [content, setContent] = useState('');
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
+  const [videoUrl, setVideoUrl] = useState<string | undefined>(undefined);
   const [showImageInput, setShowImageInput] = useState(false);
+  const [showVideoInput, setShowVideoInput] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -44,12 +50,19 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated }: CreatePostModalProp
   const [aiMood, setAiMood] = useState('');
   const [aiKeywords, setAiKeywords] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiModel, setAiModel] = useState<GeminiModelId>(getGeminiModel());
+  const [aiTemperature, setAiTemperature] = useState(0.9);
+  const [aiMaxTokens, setAiMaxTokens] = useState(500);
+  const [aiShowAdvanced, setAiShowAdvanced] = useState(false);
+  const [aiPreview, setAiPreview] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleClose = () => {
     setContent('');
     setImageUrl(undefined);
+    setVideoUrl(undefined);
     setShowImageInput(false);
+    setShowVideoInput(false);
     setShowEmoji(false);
     setShowLocation(false);
     setLocationText('');
@@ -61,6 +74,8 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated }: CreatePostModalProp
     setAiTopic('');
     setAiMood('');
     setAiKeywords('');
+    setAiPreview(null);
+    setAiShowAdvanced(false);
     setError(null);
     onClose();
   };
@@ -127,6 +142,7 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated }: CreatePostModalProp
       const res = await api.postApiPosts({
         content: content.trim(),
         imageUrl: imageUrl?.trim() || undefined,
+        videoUrl: videoUrl?.trim() || undefined,
         visibility,
       });
       if (!res.success || !res.data) throw new Error(res.message ?? 'Không tạo được bài viết.');
@@ -228,6 +244,59 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated }: CreatePostModalProp
                 </div>
               )}
 
+              {/* Video upload */}
+              {showVideoInput && (
+                <div className="mt-3 mb-2">
+                  {videoUrl ? (
+                    <div className="relative rounded-xl overflow-hidden bg-black">
+                      <video src={videoUrl} className="w-full max-h-64 object-contain" controls />
+                      <button
+                        type="button"
+                        onClick={() => setVideoUrl(undefined)}
+                        className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center gap-2 w-full h-48 bg-surface-container-low border-2 border-dashed border-outline-variant hover:border-primary/50 rounded-xl cursor-pointer transition-colors">
+                      {videoUploading ? (
+                        <Loader className="w-8 h-8 animate-spin text-primary" />
+                      ) : (
+                        <>
+                          <Video className="w-8 h-8 text-outline" />
+                          <p className="text-sm text-outline">Nhấn để chọn video (MP4, WebM, tối đa 50MB)</p>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="video/mp4,video/webm"
+                        className="hidden"
+                        disabled={videoUploading}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          e.target.value = '';
+                          setVideoUploading(true);
+                          try {
+                            const res = await uploadVideo(file);
+                            if (res.success && res.data?.url) {
+                              setVideoUrl(res.data.url);
+                            } else {
+                              toast.error(res.message ?? 'Upload video thất bại.');
+                            }
+                          } catch {
+                            toast.error('Không thể upload video. Vui lòng thử lại.');
+                          } finally {
+                            setVideoUploading(false);
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+              )}
+
               {/* Error */}
               {error && (
                 <div className="flex items-center gap-2 mt-3 text-error text-sm">
@@ -257,66 +326,214 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated }: CreatePostModalProp
               {/* AI Generate panel */}
               {showAi && (
                 <div className="mt-3 p-4 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-500/10 dark:to-blue-500/10 rounded-xl border border-purple-200/40 dark:border-purple-500/20">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-4 h-4 text-purple-500" />
-                    <span className="text-sm font-bold text-purple-700 dark:text-purple-300">Viết bằng AI</span>
-                  </div>
-                  <input
-                    className="w-full px-3 py-2 border border-outline-variant/20 rounded-lg text-sm bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary/50 mb-2"
-                    placeholder="Chủ đề bài viết (bắt buộc)..."
-                    value={aiTopic}
-                    onChange={e => setAiTopic(e.target.value)}
-                  />
-                  <div className="flex gap-2 mb-2">
-                    <select
-                      className="flex-1 px-3 py-2 border border-outline-variant/20 rounded-lg text-sm bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary/50"
-                      value={aiMood}
-                      onChange={e => setAiMood(e.target.value)}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm font-bold text-purple-700 dark:text-purple-300">Viết bằng AI</span>
+                    </div>
+                    <button
+                      onClick={() => setAiShowAdvanced(v => !v)}
+                      className="flex items-center gap-1 text-[11px] font-semibold text-purple-500 hover:text-purple-700 transition-colors"
                     >
-                      <option value="">Giọng văn (tuỳ chọn)</option>
-                      <option value="Vui vẻ">😊 Vui vẻ</option>
-                      <option value="Buồn">😢 Buồn</option>
-                      <option value="Chuyên nghiệp">💼 Chuyên nghiệp</option>
-                      <option value="Hài hước">😂 Hài hước</option>
-                      <option value="Lãng mạn">💖 Lãng mạn</option>
-                      <option value="Truyền cảm hứng">✨ Truyền cảm hứng</option>
-                    </select>
-                    <input
-                      className="flex-1 px-3 py-2 border border-outline-variant/20 rounded-lg text-sm bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary/50"
-                      placeholder="Từ khoá (tuỳ chọn)..."
-                      value={aiKeywords}
-                      onChange={e => setAiKeywords(e.target.value)}
-                    />
+                      <Settings className="w-3.5 h-3.5" />
+                      {aiShowAdvanced ? 'Ẩn nâng cao' : 'Nâng cao'}
+                    </button>
                   </div>
-                  <button
-                    className="w-full py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
-                    disabled={!aiTopic.trim() || aiLoading}
-                    onClick={async () => {
-                      if (!getGeminiApiKey()) {
-                        toast.error('Chưa cấu hình API Key. Vào Cài đặt → Gemini AI để thêm.');
-                        return;
-                      }
-                      setAiLoading(true);
-                      try {
-                        const result = await generatePostContent({
-                          topic: aiTopic.trim(),
-                          mood: aiMood || undefined,
-                          keywords: aiKeywords.trim() || undefined,
-                        });
-                        setContent(result);
-                        setShowAi(false);
-                        toast.success('Đã tạo nội dung bằng AI!');
-                        textareaRef.current?.focus();
-                      } catch (err) {
-                        toast.error((err as Error).message || 'Lỗi khi tạo nội dung AI.');
-                      } finally {
-                        setAiLoading(false);
-                      }
-                    }}
-                  >
-                    {aiLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    {aiLoading ? 'Đang tạo...' : content.trim() ? 'Tạo lại bằng AI' : 'Tạo nội dung'}
-                  </button>
+
+                  {/* Kiểm tra API Key */}
+                  {!getGeminiApiKey() ? (
+                    <div className="text-center py-3">
+                      <AlertCircle className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+                      <p className="text-sm text-on-surface font-medium mb-1">Chưa cấu hình Gemini API Key</p>
+                      <p className="text-xs text-outline mb-3">
+                        Bạn cần có Google Gemini API Key để dùng tính năng này.
+                        Lấy key miễn phí tại{' '}
+                        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">
+                          aistudio.google.com
+                        </a>
+                      </p>
+                      <button
+                        onClick={() => {
+                          handleClose();
+                          onNavigateSettings?.();
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-semibold hover:bg-purple-600 transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Đi đến Cài đặt để nhập Key
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Topic input */}
+                      <input
+                        className="w-full px-3 py-2 border border-outline-variant/20 rounded-lg text-sm bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary/50 mb-2"
+                        placeholder="Chủ đề bài viết (bắt buộc)..."
+                        value={aiTopic}
+                        onChange={e => setAiTopic(e.target.value)}
+                      />
+
+                      {/* Mood + Keywords */}
+                      <div className="flex gap-2 mb-2">
+                        <select
+                          className="flex-1 px-3 py-2 border border-outline-variant/20 rounded-lg text-sm bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary/50"
+                          value={aiMood}
+                          onChange={e => setAiMood(e.target.value)}
+                        >
+                          <option value="">Giọng văn (tuỳ chọn)</option>
+                          <option value="Vui vẻ">😊 Vui vẻ</option>
+                          <option value="Buồn">😢 Buồn</option>
+                          <option value="Chuyên nghiệp">💼 Chuyên nghiệp</option>
+                          <option value="Hài hước">😂 Hài hước</option>
+                          <option value="Lãng mạn">💖 Lãng mạn</option>
+                          <option value="Truyền cảm hứng">✨ Truyền cảm hứng</option>
+                        </select>
+                        <input
+                          className="flex-1 px-3 py-2 border border-outline-variant/20 rounded-lg text-sm bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary/50"
+                          placeholder="Từ khoá (tuỳ chọn)..."
+                          value={aiKeywords}
+                          onChange={e => setAiKeywords(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Advanced settings */}
+                      {aiShowAdvanced && (
+                        <div className="mb-3 p-3 bg-white/50 dark:bg-white/5 rounded-lg border border-purple-200/30 dark:border-purple-500/10 space-y-3">
+                          {/* Model selection */}
+                          <div>
+                            <label className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1 block">Model</label>
+                            <select
+                              className="w-full px-3 py-2 border border-outline-variant/20 rounded-lg text-sm bg-surface-container-lowest text-on-surface focus:outline-none focus:border-primary/50"
+                              value={aiModel}
+                              onChange={e => { const m = e.target.value as GeminiModelId; setAiModel(m); setGeminiModel(m); }}
+                            >
+                              {GEMINI_MODELS.map(m => (
+                                <option key={m.id} value={m.id}>{m.name} — {m.desc}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Temperature */}
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Sáng tạo (Temperature)</label>
+                              <span className="text-xs font-mono text-outline">{aiTemperature.toFixed(1)}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="2"
+                              step="0.1"
+                              value={aiTemperature}
+                              onChange={e => setAiTemperature(Number(e.target.value))}
+                              className="w-full accent-purple-500 h-1.5"
+                            />
+                            <div className="flex justify-between text-[10px] text-outline mt-0.5">
+                              <span>Chính xác (0)</span>
+                              <span>Cân bằng (1)</span>
+                              <span>Sáng tạo (2)</span>
+                            </div>
+                          </div>
+
+                          {/* Max tokens */}
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Độ dài tối đa</label>
+                              <span className="text-xs font-mono text-outline">{aiMaxTokens} tokens</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="100"
+                              max="2000"
+                              step="100"
+                              value={aiMaxTokens}
+                              onChange={e => setAiMaxTokens(Number(e.target.value))}
+                              className="w-full accent-purple-500 h-1.5"
+                            />
+                            <div className="flex justify-between text-[10px] text-outline mt-0.5">
+                              <span>Ngắn (100)</span>
+                              <span>Dài (2000)</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Preview kết quả AI */}
+                      {aiPreview && (
+                        <div className="mb-3 p-3 bg-white/70 dark:bg-white/5 rounded-lg border border-green-200/50 dark:border-green-500/20">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-bold text-green-600 dark:text-green-400 uppercase tracking-wider">Kết quả AI</span>
+                            <span className="text-[10px] text-outline">{aiPreview.length} ký tự</span>
+                          </div>
+                          <p className="text-sm text-on-surface whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto mb-2">{aiPreview}</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setContent(aiPreview);
+                                setAiPreview(null);
+                                toast.success('Đã áp dụng nội dung AI!');
+                                textareaRef.current?.focus();
+                              }}
+                              className="flex-1 py-2 rounded-lg text-sm font-semibold text-white bg-green-500 hover:bg-green-600 flex items-center justify-center gap-1.5 transition-colors"
+                            >
+                              <Check className="w-4 h-4" /> Áp dụng
+                            </button>
+                            <button
+                              onClick={() => {
+                                setContent(prev => prev ? prev + '\n\n' + aiPreview : aiPreview);
+                                setAiPreview(null);
+                                toast.success('Đã thêm vào cuối bài!');
+                                textareaRef.current?.focus();
+                              }}
+                              className="py-2 px-3 rounded-lg text-sm font-semibold text-purple-600 bg-purple-100 dark:bg-purple-500/20 hover:bg-purple-200 dark:hover:bg-purple-500/30 transition-colors"
+                            >
+                              + Nối thêm
+                            </button>
+                            <button
+                              onClick={() => setAiPreview(null)}
+                              className="py-2 px-3 rounded-lg text-sm text-outline hover:bg-surface-container transition-colors"
+                            >
+                              Bỏ
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Generate button */}
+                      <button
+                        className="w-full py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                        disabled={!aiTopic.trim() || aiLoading}
+                        onClick={async () => {
+                          setAiLoading(true);
+                          setAiPreview(null);
+                          try {
+                            const result = await generatePostContent({
+                              topic: aiTopic.trim(),
+                              mood: aiMood || undefined,
+                              keywords: aiKeywords.trim() || undefined,
+                              model: aiModel,
+                              temperature: aiTemperature,
+                              maxTokens: aiMaxTokens,
+                            });
+                            // Hiện preview thay vì ghi đè trực tiếp vào content
+                            setAiPreview(result);
+                          } catch (err) {
+                            const msg = (err as Error).message;
+                            if (msg === 'NO_API_KEY') {
+                              toast.error('API Key bị xóa. Vui lòng nhập lại trong Cài đặt.');
+                            } else {
+                              toast.error(msg || 'Lỗi khi tạo nội dung AI.');
+                            }
+                          } finally {
+                            setAiLoading(false);
+                          }
+                        }}
+                      >
+                        {aiLoading ? <Loader className="w-4 h-4 animate-spin" /> : aiPreview ? <RotateCcw className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                        {aiLoading ? 'Đang tạo...' : aiPreview ? 'Tạo lại' : 'Tạo nội dung'}
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -359,10 +576,17 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated }: CreatePostModalProp
                   <div className="flex items-center gap-1">
                     <button
                       className={`p-2.5 hover:bg-surface-container-low rounded-full transition-colors ${showImageInput ? 'text-primary' : 'text-primary/60'}`}
-                      onClick={() => setShowImageInput(!showImageInput)}
+                      onClick={() => { setShowImageInput(!showImageInput); setShowVideoInput(false); }}
                       title="Ảnh"
                     >
                       <Camera className="w-5 h-5" />
+                    </button>
+                    <button
+                      className={`p-2.5 hover:bg-surface-container-low rounded-full transition-colors ${showVideoInput ? 'text-green-500' : 'text-green-500/60'}`}
+                      onClick={() => { setShowVideoInput(!showVideoInput); setShowImageInput(false); }}
+                      title="Video"
+                    >
+                      <Video className="w-5 h-5" />
                     </button>
                     <button
                       className={`p-2.5 hover:bg-surface-container-low rounded-full transition-colors ${showTagPeople ? 'text-tertiary' : 'text-tertiary/60'}`}

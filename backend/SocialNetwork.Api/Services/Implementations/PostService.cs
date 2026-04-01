@@ -33,16 +33,19 @@ namespace SocialNetwork.Api.Services.Implementations
                 .Select(f => f.FollowingId)
                 .ToListAsync();
 
-            // Feed = posts của following + posts của chính mình
             var feedIds = followingIds.Append(currentUserId).ToHashSet();
 
+            // Feed đa dạng: posts của following + posts của chính mình + bài Public của mọi người
             var query = _context.Posts
                 .Include(p => p.User)
-                .Where(p => feedIds.Contains(p.UserId))
-                // Visibility filter: thấy Public từ tất cả, FollowersOnly từ following, Private chỉ của mình
-                .Where(p => p.Visibility == "Public"
-                         || (p.Visibility == "FollowersOnly" && followingIds.Contains(p.UserId))
-                         || p.UserId == currentUserId)
+                .Where(p =>
+                    // Bài của mình: thấy tất cả
+                    p.UserId == currentUserId
+                    // Bài của người mình follow: Public + FollowersOnly
+                    || (followingIds.Contains(p.UserId) && (p.Visibility == "Public" || p.Visibility == "FollowersOnly"))
+                    // Bài Public của tất cả mọi người (tạo đa dạng)
+                    || p.Visibility == "Public"
+                )
                 .OrderByDescending(p => p.CreatedAt);
 
             var total = await query.CountAsync();

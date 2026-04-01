@@ -45,12 +45,50 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
   const [page, setPage] = useState(1);
 
   // follow state — khởi tạo từ prop user, sau đó đồng bộ với API
+  const [internalUser, setInternalUser] = useState<UserProfile | undefined>(user);
   const [isFollowing, setIsFollowing] = useState(user?.isFollowing ?? false);
   const [followersCount, setFollowersCount] = useState(Number(user?.followers ?? 0));
   const [followLoading, setFollowLoading] = useState(false);
 
   const userId = user ? Number(user.id) : null;
   const isMe   = userId !== null && currentUser ? Number(currentUser.id) === userId : false;
+
+  // Fetch user data để sync mới nhất (isFollowing, counts, badges...)
+  const fetchUserData = useCallback(async () => {
+    if (!userId) return;
+    try {
+      // Dùng endpoint getApiUsersUsername để lấy UserDto mới nhất
+      // Nếu là chính mình thì lấy từ Me, nếu là người khác thì lấy theo username
+      const username = internalUser?.username || user?.username;
+      if (!username) return;
+
+      const res = await api.getApiUsersUsername(username);
+      if (res.success && res.data) {
+        const freshUser = {
+          id: String(res.data.id ?? ''),
+          username: res.data.username || '',
+          name: res.data.fullName || res.data.username || 'Unknown',
+          avatar: res.data.avatarUrl || `https://picsum.photos/seed/${res.data.username}/200/200`,
+          cover: res.data.coverUrl || 'https://picsum.photos/seed/cover/1200/400',
+          bio: res.data.bio || '',
+          role: res.data.role || 'Member',
+          followers: String(res.data.followersCount ?? 0),
+          following: String(res.data.followingCount ?? 0),
+          posts: String(res.data.postsCount ?? 0),
+          isFollowing: res.data.isFollowing,
+          createdAt: res.data.createdAt,
+          dateOfBirth: res.data.dateOfBirth ?? undefined,
+          hometown: res.data.hometown ?? undefined,
+          gender: res.data.gender ?? undefined,
+          displayedBadge: res.data.displayedBadge,
+        };
+        setInternalUser(freshUser);
+        setIsFollowing(freshUser.isFollowing ?? false);
+        setFollowersCount(Number(freshUser.followers ?? 0));
+      }
+    } catch { /* ignore */ }
+  }, [userId, api, internalUser?.username, user?.username]);
+
 
   // Profile edit state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -151,8 +189,10 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
     setPosts([]);
     setPage(1);
     setHasMore(true);
+    setInternalUser(user);
     setIsFollowing(user?.isFollowing ?? false);
     setFollowersCount(Number(user?.followers ?? 0));
+    fetchUserData();
     fetchPosts(1, true);
   }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -207,9 +247,9 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
     }
   };
 
-  const displayName = user?.name || 'Unknown';
-  const avatar      = user?.avatar || `https://picsum.photos/seed/${user?.id}/200/200`;
-  const cover       = user?.cover  || 'https://picsum.photos/seed/cover/1200/400';
+  const displayName = (internalUser || user)?.name || 'Unknown';
+  const avatar      = (internalUser || user)?.avatar || `https://picsum.photos/seed/${(internalUser || user)?.id}/200/200`;
+  const cover       = (internalUser || user)?.cover  || 'https://picsum.photos/seed/cover/1200/400';
 
   return (
     <div className="flex flex-col gap-8">
@@ -254,23 +294,23 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                 <h1 className="font-headline font-extrabold text-3xl md:text-4xl text-on-surface tracking-tight">
                   {displayName}
-                  {user?.displayedBadge && (
-                    <span className="ml-2 align-middle"><BadgeChip badge={user.displayedBadge} size="md" /></span>
+                  {(internalUser || user)?.displayedBadge && (
+                    <span className="ml-2 align-middle"><BadgeChip badge={(internalUser || user)!.displayedBadge!} size="md" /></span>
                   )}
                 </h1>
-                {!isMe && user?.role && (
+                {!isMe && (internalUser || user)?.role && (
                   <span className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full w-fit mx-auto md:mx-0">
-                    {user.role}
+                    {(internalUser || user)?.role}
                   </span>
                 )}
               </div>
-              {user?.bio && (
-                <p className="text-on-surface-variant mt-1 max-w-lg leading-relaxed">{user.bio}</p>
+              {(internalUser || user)?.bio && (
+                <p className="text-on-surface-variant mt-1 max-w-lg leading-relaxed">{(internalUser || user)?.bio}</p>
               )}
               <div className="flex items-center justify-center md:justify-start gap-6 mt-4">
-                <Stat value={user?.following ?? '0'} label="Following" />
+                <Stat value={(internalUser || user)?.following ?? '0'} label="Following" />
                 <Stat value={formatCount(followersCount)} label="Followers" border />
-                <Stat value={user?.posts ?? '0'} label="Bài viết" />
+                <Stat value={(internalUser || user)?.posts ?? '0'} label="Bài viết" />
               </div>
             </div>
 
@@ -343,10 +383,10 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
           <div className="bg-surface-container-lowest p-6 rounded-2xl surface-elevation-tonal space-y-4">
             <h3 className="font-headline font-bold text-lg text-on-surface">Giới thiệu</h3>
             <div className="space-y-4">
-              <IntroItem icon={<LayoutGrid className="w-4 h-4 text-primary" />} text={user?.role ?? 'Thành viên'} />
+              <IntroItem icon={<LayoutGrid className="w-4 h-4 text-primary" />} text={(internalUser || user)?.role ?? 'Thành viên'} />
               <IntroItem icon={<MapPin className="w-4 h-4 text-primary" />} text="Vietnam" />
-              {user?.name && (
-                <IntroItem icon={<Share2 className="w-4 h-4 text-primary" />} text={user.name} isLink />
+              {(internalUser || user)?.name && (
+                <IntroItem icon={<Share2 className="w-4 h-4 text-primary" />} text={(internalUser || user)!.name} isLink />
               )}
             </div>
           </div>
@@ -426,34 +466,34 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
           <div className="bg-surface-container-lowest rounded-2xl p-6 surface-elevation-tonal space-y-6">
             <h3 className="font-headline font-bold text-lg text-on-surface">Giới thiệu</h3>
 
-            {user?.bio && (
+            {(internalUser || user)?.bio && (
               <div className="space-y-1">
                 <span className="text-xs font-bold text-outline uppercase tracking-wider">Bio</span>
-                <p className="text-on-surface-variant leading-relaxed">{user.bio}</p>
+                <p className="text-on-surface-variant leading-relaxed">{(internalUser || user)?.bio}</p>
               </div>
             )}
 
             <div className="space-y-4 pt-2">
-              <IntroItem icon={<Info className="w-4 h-4 text-primary" />} text={`@${user?.username ?? 'unknown'}`} />
-              <IntroItem icon={<LayoutGrid className="w-4 h-4 text-primary" />} text={user?.role ?? 'Thành viên'} />
-              {user?.hometown && (
-                <IntroItem icon={<MapPin className="w-4 h-4 text-primary" />} text={user.hometown} />
+              <IntroItem icon={<Info className="w-4 h-4 text-primary" />} text={`@${(internalUser || user)?.username ?? 'unknown'}`} />
+              <IntroItem icon={<LayoutGrid className="w-4 h-4 text-primary" />} text={(internalUser || user)?.role ?? 'Thành viên'} />
+              {(internalUser || user)?.hometown && (
+                <IntroItem icon={<MapPin className="w-4 h-4 text-primary" />} text={(internalUser || user)!.hometown!} />
               )}
-              {!user?.hometown && (
+              {!(internalUser || user)?.hometown && (
                 <IntroItem icon={<MapPin className="w-4 h-4 text-primary" />} text="Chưa cập nhật quê quán" />
               )}
-              {user?.gender && (
-                <IntroItem icon={<Share2 className="w-4 h-4 text-primary" />} text={user.gender === 'Male' ? 'Nam' : user.gender === 'Female' ? 'Nữ' : 'Khác'} />
+              {(internalUser || user)?.gender && (
+                <IntroItem icon={<Share2 className="w-4 h-4 text-primary" />} text={(internalUser || user)!.gender === 'Male' ? 'Nam' : (internalUser || user)!.gender === 'Female' ? 'Nữ' : 'Khác'} />
               )}
-              {user?.dateOfBirth && (
-                <IntroItem icon={<CalendarDays className="w-4 h-4 text-primary" />} text={`Sinh ngày: ${new Date(user.dateOfBirth).toLocaleDateString('vi-VN')}`} />
+              {(internalUser || user)?.dateOfBirth && (
+                <IntroItem icon={<CalendarDays className="w-4 h-4 text-primary" />} text={`Sinh ngày: ${new Date((internalUser || user)!.dateOfBirth!).toLocaleDateString('vi-VN')}`} />
               )}
-              <IntroItem icon={<CalendarDays className="w-4 h-4 text-primary" />} text={`Tham gia: ${user?.createdAt ? new Date(user.createdAt).toLocaleDateString('vi-VN') : '—'}`} />
+              <IntroItem icon={<CalendarDays className="w-4 h-4 text-primary" />} text={`Tham gia: ${(internalUser || user)?.createdAt ? new Date((internalUser || user)!.createdAt!).toLocaleDateString('vi-VN') : '—'}`} />
             </div>
 
             <div className="grid grid-cols-3 gap-4 pt-4 border-t border-outline-variant/10">
               <div className="text-center p-4 bg-surface-container-low rounded-xl">
-                <span className="block font-bold text-xl text-on-surface">{user?.posts ?? '0'}</span>
+                <span className="block font-bold text-xl text-on-surface">{(internalUser || user)?.posts ?? '0'}</span>
                 <span className="text-xs text-outline">Bài viết</span>
               </div>
               <div className="text-center p-4 bg-surface-container-low rounded-xl">
@@ -461,7 +501,7 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
                 <span className="text-xs text-outline">Followers</span>
               </div>
               <div className="text-center p-4 bg-surface-container-low rounded-xl">
-                <span className="block font-bold text-xl text-on-surface">{user?.following ?? '0'}</span>
+                <span className="block font-bold text-xl text-on-surface">{(internalUser || user)?.following ?? '0'}</span>
                 <span className="text-xs text-outline">Following</span>
               </div>
             </div>
@@ -554,68 +594,71 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
 
       {/* Profile edit modal */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-surface-container">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-surface-container-lowest rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-outline-variant/10">
               <h2 className="font-headline font-bold text-lg text-on-surface">Chỉnh sửa profile</h2>
               <button onClick={() => setShowEditModal(false)} className="p-2 rounded-full hover:bg-surface-container transition-colors">
                 <X className="w-5 h-5 text-outline" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            
+            <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh] custom-scrollbar">
               <div>
-                <label className="block text-xs font-bold text-outline uppercase tracking-wider mb-1">Họ tên</label>
+                <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5 ml-1">Họ tên</label>
                 <input
                   type="text"
                   value={editFullName}
                   onChange={e => setEditFullName(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-2.5 px-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none"
+                  className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl py-2 px-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none transition-all"
                   placeholder="Nhập tên hiển thị"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-outline uppercase tracking-wider mb-1">Bio</label>
+                <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5 ml-1">Bio</label>
                 <textarea
                   value={editBio}
                   onChange={e => setEditBio(e.target.value)}
-                  rows={3}
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-2.5 px-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none resize-none"
+                  rows={2}
+                  className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl py-2 px-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none resize-none transition-all"
                   placeholder="Mô tả ngắn về bản thân"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-bold text-outline uppercase tracking-wider mb-2">Ảnh đại diện</label>
-                <ImageUpload value={editAvatarUrl || undefined} onChange={url => setEditAvatarUrl(url ?? '')} variant="avatar" placeholder="Chọn avatar" />
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5 ml-1">Ảnh đại diện</label>
+                  <ImageUpload value={editAvatarUrl || undefined} onChange={url => setEditAvatarUrl(url ?? '')} variant="avatar" placeholder="Chọn avatar" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5 ml-1">Ảnh bìa</label>
+                  <ImageUpload value={editCoverUrl || undefined} onChange={url => setEditCoverUrl(url ?? '')} variant="banner" placeholder="Chọn ảnh bìa" />
+                </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-outline uppercase tracking-wider mb-2">Ảnh bìa</label>
-                <ImageUpload value={editCoverUrl || undefined} onChange={url => setEditCoverUrl(url ?? '')} variant="banner" placeholder="Chọn ảnh bìa" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-outline uppercase tracking-wider mb-1">Ngày sinh</label>
+                <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5 ml-1">Ngày sinh</label>
                 <input
                   type="date"
                   value={editDateOfBirth}
                   onChange={e => setEditDateOfBirth(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-2.5 px-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none"
+                  className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl py-2 px-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none transition-all"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-outline uppercase tracking-wider mb-1">Quê quán</label>
+                <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5 ml-1">Quê quán</label>
                 <input
                   type="text"
                   value={editHometown}
                   onChange={e => setEditHometown(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-2.5 px-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none"
+                  className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl py-2 px-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none transition-all"
                   placeholder="Nhập quê quán"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-outline uppercase tracking-wider mb-1">Giới tính</label>
+                <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5 ml-1">Giới tính</label>
                 <select
                   value={editGender}
                   onChange={e => setEditGender(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-2.5 px-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none"
+                  className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl py-2 px-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/30 focus:outline-none transition-all"
                 >
                   <option value="">Chưa chọn</option>
                   <option value="Male">Nam</option>
@@ -624,21 +667,22 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
                 </select>
               </div>
             </div>
-            <div className="flex items-center gap-3 px-6 pb-6 justify-end">
+
+            <div className="flex items-center gap-3 p-5 bg-surface-container-lowest border-t border-outline-variant/10 justify-end">
               <button
                 onClick={() => setShowEditModal(false)}
                 disabled={editSaving}
-                className="px-6 py-2.5 rounded-xl text-sm text-outline hover:bg-surface-container transition-colors"
+                className="px-5 py-2 rounded-xl text-sm font-bold text-outline hover:bg-surface-container transition-colors"
               >
                 Hủy
               </button>
               <button
                 onClick={handleSaveProfile}
                 disabled={editSaving}
-                className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:brightness-110 disabled:opacity-60 transition-all"
+                className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:brightness-110 shadow-lg shadow-primary/20 disabled:opacity-60 transition-all active:scale-95"
               >
                 {editSaving ? <Loader className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Lưu thay đổi
+                Lưu
               </button>
             </div>
           </div>
@@ -646,10 +690,10 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
       )}
 
       {/* Poke Modal */}
-      {userId && user && (
+      {userId && (internalUser || user) && (
         <PokeModal
           targetUserId={userId}
-          targetName={user.name}
+          targetName={(internalUser || user)!.name}
           isOpen={showPokeModal}
           onClose={() => setShowPokeModal(false)}
         />

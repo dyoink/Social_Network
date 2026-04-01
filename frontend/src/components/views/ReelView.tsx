@@ -1,16 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Heart, MessageCircle, Share2, Volume2, VolumeX, Loader, RefreshCw } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Volume2, VolumeX, Loader, RefreshCw, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getReels, type ReelPostDto } from '../../api/storyApi';
+import { getReels, uploadVideo, type ReelPostDto } from '../../api/storyApi';
+import { getSocialNetworkApiV1 } from '../../api/api-generated';
 import toast from 'react-hot-toast';
 
 const ReelView = () => {
+  const api = getSocialNetworkApiV1();
   const [reels, setReels] = useState<ReelPostDto[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [muted, setMuted] = useState(true);
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadContent, setUploadContent] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
 
   const loadReels = useCallback(async () => {
     setLoading(true);
@@ -76,6 +82,58 @@ const ReelView = () => {
 
   const currentReel = reels[currentIdx];
 
+  // Like handler cho reel
+  const handleLikeReel = async () => {
+    if (!currentReel) return;
+    try {
+      const res = await api.postApiPostsIdLike(currentReel.id, { reactionType: 'Like' });
+      if (res.success && res.data) {
+        setReels(prev => prev.map((r, i) => i === currentIdx
+          ? { ...r, isLiked: res.data!.isLiked ?? !r.isLiked, likesCount: Number(res.data!.likesCount ?? r.likesCount) }
+          : r
+        ));
+      }
+    } catch {
+      toast.error('Không thể thả tim.');
+    }
+  };
+
+  // Share handler
+  const handleShareReel = () => {
+    if (!currentReel) return;
+    const url = `${window.location.origin}/post/${currentReel.id}`;
+    navigator.clipboard.writeText(url)
+      .then(() => toast.success('Đã sao chép liên kết!'))
+      .catch(() => toast.error('Không thể sao chép.'));
+  };
+
+  // Upload reel handler
+  const handleUploadReel = async (file: File) => {
+    setUploading(true);
+    try {
+      const uploadRes = await uploadVideo(file);
+      if (!uploadRes.success || !uploadRes.data?.url) {
+        toast.error('Upload video thất bại.');
+        return;
+      }
+      const postRes = await api.postApiPosts({
+        content: uploadContent.trim() || '🎬',
+        videoUrl: uploadRes.data.url,
+        visibility: 'Public',
+      });
+      if (postRes.success) {
+        toast.success('Đã đăng Reel!');
+        setShowUpload(false);
+        setUploadContent('');
+        loadReels();
+      }
+    } catch {
+      toast.error('Không thể đăng Reel.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -129,19 +187,19 @@ const ReelView = () => {
 
             {/* Actions sidebar */}
             <div className="absolute right-3 bottom-24 flex flex-col items-center gap-5">
-              <button className="flex flex-col items-center gap-1">
+              <button onClick={handleLikeReel} className="flex flex-col items-center gap-1">
                 <div className={`p-2.5 rounded-full ${currentReel.isLiked ? 'bg-red-500/20' : 'bg-black/30'} backdrop-blur-sm`}>
                   <Heart className={`w-6 h-6 ${currentReel.isLiked ? 'text-red-500 fill-red-500' : 'text-white'}`} />
                 </div>
                 <span className="text-white text-xs font-semibold">{currentReel.likesCount}</span>
               </button>
-              <button className="flex flex-col items-center gap-1">
+              <button onClick={() => toast('Bình luận sẽ hiện trong bài viết chi tiết.', { icon: '💬' })} className="flex flex-col items-center gap-1">
                 <div className="p-2.5 rounded-full bg-black/30 backdrop-blur-sm">
                   <MessageCircle className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-white text-xs font-semibold">{currentReel.commentsCount}</span>
               </button>
-              <button className="flex flex-col items-center gap-1">
+              <button onClick={handleShareReel} className="flex flex-col items-center gap-1">
                 <div className="p-2.5 rounded-full bg-black/30 backdrop-blur-sm">
                   <Share2 className="w-6 h-6 text-white" />
                 </div>
@@ -189,6 +247,57 @@ const ReelView = () => {
           >
             <RefreshCw className="w-4 h-4" /> Tải thêm
           </button>
+        </div>
+      )}
+
+      {/* Upload Reel button (FAB) */}
+      <button
+        onClick={() => setShowUpload(true)}
+        className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg hover:brightness-110 transition-all"
+      >
+        <Plus className="w-4 h-4" /> Đăng Reel
+      </button>
+
+      {/* Upload Reel Modal */}
+      {showUpload && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-surface-container-lowest w-full max-w-md rounded-xl p-6 shadow-xl">
+            <h2 className="text-lg font-bold text-on-surface mb-4">Đăng Reel mới</h2>
+            <textarea
+              className="w-full bg-surface-container-low border border-outline-variant/30 focus:ring-2 focus:ring-primary/30 rounded-xl py-3 px-4 text-sm text-on-surface placeholder:text-outline resize-none min-h-[80px] mb-3"
+              placeholder="Viết mô tả cho Reel..."
+              value={uploadContent}
+              onChange={e => setUploadContent(e.target.value)}
+            />
+            <input
+              ref={uploadInputRef}
+              type="file"
+              accept="video/mp4,video/webm"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) handleUploadReel(file);
+                e.target.value = '';
+              }}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => uploadInputRef.current?.click()}
+                disabled={uploading}
+                className="flex-1 btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {uploading ? <Loader className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                {uploading ? 'Đang tải lên...' : 'Chọn video'}
+              </button>
+              <button
+                onClick={() => { setShowUpload(false); setUploadContent(''); }}
+                disabled={uploading}
+                className="px-4 py-3 rounded-xl text-sm text-outline hover:bg-surface-container transition-colors"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

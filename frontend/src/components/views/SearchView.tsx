@@ -14,18 +14,25 @@ function summaryToProfile(u: UserSummaryDto): UserProfile {
     cover:     `https://picsum.photos/seed/cover${u.id}/1200/400`,
     bio:       '',
     role:      'Thành viên',
-    followers: '0',
+    followers: String(u.followersCount ?? 0),
     following: '0',
     posts:     '0',
+    isFollowing: u.isFollowing,
+    displayedBadge: u.displayedBadge,
   };
 }
 
 // ─── UserCard ──────────────────────────────────────────────────────────────────
 
 const UserCard = ({ user, onUserClick }: { user: UserSummaryDto; onUserClick: (u: UserProfile) => void }) => {
-  const [followed, setFollowed] = useState(false);
+  const [followed, setFollowed] = useState(user.isFollowing ?? false);
   const [loading, setLoading]   = useState(false);
   const api = getSocialNetworkApiV1();
+
+  // Đồng bộ lại state nếu prop thay đổi (ví dụ khi search lại)
+  useEffect(() => {
+    setFollowed(user.isFollowing ?? false);
+  }, [user.isFollowing]);
 
   const handleFollow = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -64,7 +71,7 @@ const UserCard = ({ user, onUserClick }: { user: UserSummaryDto; onUserClick: (u
         onClick={handleFollow}
         disabled={loading}
       >
-        {loading ? '...' : followed ? 'Đang theo dõi' : 'Theo dõi'}
+        {loading ? '...' : followed ? 'Bỏ theo dõi' : 'Theo dõi'}
       </button>
     </div>
   );

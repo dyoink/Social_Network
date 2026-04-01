@@ -198,6 +198,8 @@ export interface UserSummaryDto {
   fullName?: string | null;
   /** @nullable */
   avatarUrl?: string | null;
+  /** @nullable */
+  followersCount?: number | null;
   displayedBadge?: null | UserBadgeDto;
 }
 
@@ -532,6 +534,8 @@ export interface PostDto {
   content?: string;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  videoUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
   visibility?: string;
@@ -749,6 +753,8 @@ export interface CreatePostDto {
   content: string;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  videoUrl?: string | null;
   visibility?: string;
 }
 

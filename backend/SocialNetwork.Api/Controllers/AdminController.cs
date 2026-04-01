@@ -112,6 +112,22 @@ public class AdminController(IAdminService adminService, IBadgeService badgeServ
         }
     }
 
+    [HttpPut("users/bulk-ban")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> BulkBanUsers([FromBody] List<int> ids, [FromQuery] bool ban = true)
+    {
+        await adminService.BulkBanUsersAsync(ids, ban);
+        return Ok(ApiResponse.Ok(ban ? "Các user đã bị ban." : "Các user đã được mở ban."));
+    }
+
+    [HttpDelete("users/bulk-delete")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> BulkDeleteUsers([FromBody] List<int> ids)
+    {
+        await adminService.BulkDeleteUsersAsync(ids);
+        return Ok(ApiResponse.Ok("Các user đã bị xóa vĩnh viễn."));
+    }
+
     // ─── Posts ────────────────────────────────────────────────────────────────
 
     [HttpGet("posts")]
@@ -139,6 +155,14 @@ public class AdminController(IAdminService adminService, IBadgeService badgeServ
         {
             return NotFound(ApiResponse.Fail("Không tìm thấy bài viết."));
         }
+    }
+
+    [HttpDelete("posts/bulk-delete")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> BulkDeletePosts([FromBody] List<int> ids)
+    {
+        await adminService.BulkDeletePostsAsync(ids);
+        return Ok(ApiResponse.Ok("Các bài viết đã bị xóa."));
     }
 
     // ─── Comments ──────────────────────────────────────────────────────────────
@@ -171,6 +195,14 @@ public class AdminController(IAdminService adminService, IBadgeService badgeServ
         }
     }
 
+    [HttpDelete("comments/bulk-delete")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> BulkDeleteComments([FromBody] List<int> ids)
+    {
+        await adminService.BulkDeleteCommentsAsync(ids);
+        return Ok(ApiResponse.Ok("Các bình luận đã bị xóa."));
+    }
+
     // ─── Reports ──────────────────────────────────────────────────────────────
 
     [HttpGet("reports")]
@@ -192,6 +224,14 @@ public class AdminController(IAdminService adminService, IBadgeService badgeServ
         return Ok(ApiResponse.Ok("Báo cáo đã được xử lý."));
     }
 
+    [HttpPut("reports/bulk-resolve")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> BulkResolveReports([FromBody] List<int> ids)
+    {
+        await adminService.BulkResolveReportsAsync(ids);
+        return Ok(ApiResponse.Ok("Các báo cáo đã được xử lý."));
+    }
+
     [HttpDelete("reports/{id}")]
     [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiResponse>(StatusCodes.Status404NotFound)]
@@ -206,6 +246,14 @@ public class AdminController(IAdminService adminService, IBadgeService badgeServ
         {
             return NotFound(ApiResponse.Fail("Không tìm thấy báo cáo."));
         }
+    }
+
+    [HttpDelete("reports/bulk-delete")]
+    [ProducesResponseType<ApiResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> BulkDeleteReports([FromBody] List<int> ids)
+    {
+        await adminService.BulkDeleteReportsAsync(ids);
+        return Ok(ApiResponse.Ok("Các báo cáo đã bị xóa."));
     }
 
     // ─── Badges ────────────────────────────────────────────────────────────────

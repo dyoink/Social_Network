@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Ban, CheckCircle, Shield, Trash2, Loader, ChevronLeft, ChevronRight, KeyRound, Eye, X } from 'lucide-react';
+import { Search, Ban, CheckCircle, Shield, Trash2, Loader, KeyRound, Eye, X } from 'lucide-react';
 import { getSocialNetworkApiV1, type AdminUserDto } from '../../../api/api-generated';
 import toast from 'react-hot-toast';
 import { timeAgo } from '../../../utils/time';
+import Pagination from '../../ui/Pagination';
 
 const AdminUsersView = () => {
   const api = getSocialNetworkApiV1();
@@ -13,6 +14,8 @@ const AdminUsersView = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isBulkLoading, setIsBulkLoading] = useState(false);
   const [actionId, setActionId] = useState<number | null>(null);
   const [detailUser, setDetailUser] = useState<AdminUserDto | null>(null);
   const [resetPwUser, setResetPwUser] = useState<AdminUserDto | null>(null);
@@ -26,6 +29,7 @@ const AdminUsersView = () => {
         if (res.success && res.data) {
           setUsers(res.data.items ?? []);
           setTotal(Number(res.data.totalCount ?? 0));
+          setSelectedIds([]);
         }
       })
       .catch(console.error)
@@ -35,6 +39,52 @@ const AdminUsersView = () => {
   useEffect(() => { fetchUsers(); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = () => { setPage(1); fetchUsers(q, roleFilter, statusFilter, 1); };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === users.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(users.map(u => u.id!).filter(Boolean));
+    }
+  };
+
+  const handleBulkBan = async (ban: boolean) => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Ban/Mở ban ${selectedIds.length} người dùng đã chọn?`)) return;
+    setIsBulkLoading(true);
+    try {
+      await api.putApiAdminUsersBulkBan(selectedIds, { ban });
+      setUsers(prev => prev.map(u => selectedIds.includes(u.id!) ? { ...u, isActive: !ban } : u));
+      toast.success(`Đã ${ban ? 'ban' : 'mở ban'} ${selectedIds.length} người dùng`);
+      setSelectedIds([]);
+      fetchUsers();
+    } catch {
+      toast.error('Thao tác hàng loạt thất bại');
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Xóa vĩnh viễn ${selectedIds.length} người dùng đã chọn? Hành động này không thể hoàn tác.`)) return;
+    setIsBulkLoading(true);
+    try {
+      await api.deleteApiAdminUsersBulkDelete(selectedIds);
+      setUsers(prev => prev.filter(u => !selectedIds.includes(u.id!)));
+      setTotal(t => t - selectedIds.length);
+      toast.success(`Đã xóa ${selectedIds.length} người dùng`);
+      setSelectedIds([]);
+    } catch {
+      toast.error('Xóa hàng loạt thất bại');
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
 
   const handleBan = async (user: AdminUserDto) => {
     setActionId(Number(user.id!));
@@ -87,7 +137,7 @@ const AdminUsersView = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap items-center">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" />
           <input
@@ -115,6 +165,42 @@ const AdminUsersView = () => {
         </button>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between px-6 py-4 bg-primary/5 border border-primary/20 rounded-2xl animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-bold text-primary">Đã chọn {selectedIds.length} người dùng</span>
+            <button onClick={() => setSelectedIds([])} className="text-xs text-outline hover:underline">Hủy chọn</button>
+          </div>
+          <div className="flex items-center gap-2">
+            {isBulkLoading ? (
+              <Loader className="w-5 h-5 animate-spin text-primary" />
+            ) : (
+              <>
+                <button
+                  onClick={() => handleBulkBan(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-xs font-bold hover:bg-orange-600 transition-colors"
+                >
+                  <Ban className="w-3.5 h-3.5" /> Ban
+                </button>
+                <button
+                  onClick={() => handleBulkBan(false)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl text-xs font-bold hover:bg-green-700 transition-colors"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" /> Mở ban
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Xóa vĩnh viễn
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/10 overflow-hidden overflow-x-auto">
         {loading ? (
@@ -125,7 +211,15 @@ const AdminUsersView = () => {
           <table className="w-full text-sm">
             <thead className="bg-surface-container-low border-b border-outline-variant/10">
               <tr>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Người dùng</th>
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                    checked={users.length > 0 && selectedIds.length === users.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <th className="text-left px-2 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Người dùng</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Email</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Role</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Trạng thái</th>
@@ -137,8 +231,16 @@ const AdminUsersView = () => {
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
               {users.map(user => (
-                <tr key={user.id} className="hover:bg-surface-container-low/50 transition-colors">
+                <tr key={user.id} className={`hover:bg-surface-container-low/50 transition-colors ${selectedIds.includes(user.id!) ? 'bg-primary/5' : ''}`}>
                   <td className="px-6 py-4">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                      checked={selectedIds.includes(user.id!)}
+                      onChange={() => toggleSelect(user.id!)}
+                    />
+                  </td>
+                  <td className="px-2 py-4">
                     <div className="flex items-center gap-3">
                       <img src={user.avatarUrl || `https://picsum.photos/seed/${user.id}/40/40`} alt="" className="w-9 h-9 rounded-full object-cover" referrerPolicy="no-referrer" />
                       <div>
@@ -181,13 +283,12 @@ const AdminUsersView = () => {
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-outline-variant/10">
-            <p className="text-sm text-outline">Trang {page} / {totalPages} ({total} kết quả)</p>
-            <div className="flex gap-2">
-              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-2 rounded-lg hover:bg-surface-container disabled:opacity-40"><ChevronLeft className="w-4 h-4" /></button>
-              <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="p-2 rounded-lg hover:bg-surface-container disabled:opacity-40"><ChevronRight className="w-4 h-4" /></button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalCount={total}
+            onPageChange={setPage}
+          />
         )}
       </div>
 

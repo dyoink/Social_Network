@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, UserPlus, Check, Loader, Hash } from 'lucide-react';
+import { TrendingUp, UserPlus, Check, Loader, Hash, Users } from 'lucide-react';
 import { getSocialNetworkApiV1, type UserSummaryDto, type TrendingHashtagDto } from '../../api/api-generated';
 import { UserProfile } from '../../types';
+import BadgeChip from '../ui/BadgeChip';
 
 // Chuyển UserSummaryDto → UserProfile tạm để onUserClick tương thích
 function summaryToProfile(u: UserSummaryDto): UserProfile {
@@ -51,16 +52,23 @@ const SuggestedUser = ({ user, onUserClick }: SuggestedUserProps) => {
 
   const name   = user.fullName || user.username || 'Unknown';
   const avatar = user.avatarUrl || `https://picsum.photos/seed/${user.id}/100/100`;
+  const followersCount = user.followersCount ?? 0;
 
   return (
     <div className="flex items-center justify-between group">
-      <div className="flex items-center gap-3 cursor-pointer" onClick={() => onUserClick(summaryToProfile(user))}>
+      <div className="flex items-center gap-3 cursor-pointer min-w-0 flex-1" onClick={() => onUserClick(summaryToProfile(user))}>
         <div className="w-10 h-10 rounded-full overflow-hidden border border-primary/5 group-hover:ring-2 group-hover:ring-primary/20 transition-all flex-shrink-0">
           <img alt={name} src={avatar} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
         </div>
-        <div className="min-w-0">
-          <h4 className="text-sm font-bold text-on-surface leading-none mb-1 group-hover:text-primary transition-colors truncate">{name}</h4>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1">
+            <h4 className="text-sm font-bold text-on-surface leading-none group-hover:text-primary transition-colors truncate">{name}</h4>
+            {user.displayedBadge && <BadgeChip badge={user.displayedBadge} />}
+          </div>
           <p className="text-[10px] text-outline truncate">@{user.username}</p>
+          <p className="text-[10px] text-outline flex items-center gap-0.5 mt-0.5">
+            <Users className="w-3 h-3" /> {followersCount.toLocaleString()} người theo dõi
+          </p>
         </div>
       </div>
       <button
@@ -94,7 +102,7 @@ const RightSidebar = ({ onUserClick, onHashtagClick }: { onUserClick: (u: UserPr
   useEffect(() => {
     api.getApiUsersSuggestions()
       .then(res => {
-        if (res.success && res.data) setSuggestions(res.data.slice(0, 5));
+        if (res.success && res.data) setSuggestions(res.data.slice(0, 10));
       })
       .catch(() => { /* ẩn lỗi nếu chưa login */ })
       .finally(() => setLoading(false));

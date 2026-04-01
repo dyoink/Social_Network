@@ -1,45 +1,87 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Heart, MessageCircle, UserPlus, Bell, CheckCheck, Loader, AlertCircle } from 'lucide-react';
-import { getSocialNetworkApiV1, type NotificationDto } from '../../api/api-generated';
+import { Heart, MessageCircle, UserPlus, Bell, CheckCheck, Loader, AlertCircle, Award, Eye, HandMetal } from 'lucide-react';
+import { getSocialNetworkApiV1, type NotificationDto, type PostDto } from '../../api/api-generated';
 import { getNotificationConnection } from '../../api/signalr';
 import { timeAgo } from '../../utils/time';
+import { UserProfile } from '../../types';
 
 // Icon theo loại thông báo
 const iconForType = (type: string) => {
   switch (type) {
-    case 'like':    return { icon: <Heart    className="w-3 h-3 text-white fill-current" />, bg: 'bg-primary' };
-    case 'comment': return { icon: <MessageCircle className="w-3 h-3 text-white" />, bg: 'bg-tertiary' };
-    case 'reply':   return { icon: <MessageCircle className="w-3 h-3 text-white" />, bg: 'bg-tertiary' };
-    case 'follow':  return { icon: <UserPlus className="w-3 h-3 text-white" />, bg: 'bg-secondary' };
-    default:        return { icon: <Bell     className="w-3 h-3 text-white" />, bg: 'bg-outline' };
+    case 'like':       return { icon: <Heart         className="w-3 h-3 text-white fill-current" />, bg: 'bg-primary' };
+    case 'reaction':   return { icon: <Heart         className="w-3 h-3 text-white fill-current" />, bg: 'bg-red-500' };
+    case 'comment':    return { icon: <MessageCircle className="w-3 h-3 text-white" />, bg: 'bg-tertiary' };
+    case 'reply':      return { icon: <MessageCircle className="w-3 h-3 text-white" />, bg: 'bg-tertiary' };
+    case 'follow':     return { icon: <UserPlus      className="w-3 h-3 text-white" />, bg: 'bg-secondary' };
+    case 'badge':      return { icon: <Award         className="w-3 h-3 text-white" />, bg: 'bg-yellow-500' };
+    case 'story_view': return { icon: <Eye           className="w-3 h-3 text-white" />, bg: 'bg-purple-500' };
+    case 'poke':       return { icon: <HandMetal     className="w-3 h-3 text-white" />, bg: 'bg-orange-500' };
+    default:           return { icon: <Bell          className="w-3 h-3 text-white" />, bg: 'bg-outline' };
   }
 };
 
 const actionLabel = (type: string) => {
   switch (type) {
-    case 'like':    return 'đã thích bài viết của bạn.';
-    case 'comment': return 'đã bình luận bài viết của bạn.';
-    case 'reply':   return 'đã trả lời bình luận của bạn.';
-    case 'follow':  return 'đã bắt đầu theo dõi bạn.';
-    default:        return 'đã tương tác với bạn.';
+    case 'like':       return 'đã thích bài viết của bạn.';
+    case 'reaction':   return 'đã bày tỏ cảm xúc về bài viết của bạn.';
+    case 'comment':    return 'đã bình luận bài viết của bạn.';
+    case 'reply':      return 'đã trả lời bình luận của bạn.';
+    case 'follow':     return 'đã bắt đầu theo dõi bạn.';
+    case 'badge':      return 'bạn đã nhận được huy hiệu mới!';
+    case 'story_view': return 'đã xem story của bạn.';
+    case 'poke':       return 'đã chọc bạn!';
+    default:           return 'đã tương tác với bạn.';
   }
 };
 
 interface NotificationItemProps {
   notification: NotificationDto;
   onRead: (id: number) => void;
+  onPostClick?: (post: PostDto) => void;
+  onUserClick?: (user: UserProfile) => void;
 }
 
-const NotificationItem = ({ notification, onRead }: NotificationItemProps) => {
+const NotificationItem = ({ notification, onRead, onPostClick, onUserClick }: NotificationItemProps) => {
   const api = getSocialNetworkApiV1();
   const { icon, bg } = iconForType(notification.notificationType ?? '');
   const actorName   = notification.actor?.fullName || notification.actor?.username || 'Ai đó';
   const actorAvatar = notification.actor?.avatarUrl || `https://picsum.photos/seed/${notification.actor?.id}/50/50`;
 
   const handleClick = async () => {
+    // 1. Mark as read
     if (!notification.isRead && notification.id) {
-      await api.putApiNotificationsIdRead(Number(notification.id));
-      onRead(Number(notification.id));
+      try {
+        await api.putApiNotificationsIdRead(Number(notification.id));
+        onRead(Number(notification.id));
+      } catch { /* ignore */ }
+    }
+
+    // 2. Navigate based on type
+    const type = notification.notificationType;
+    if (['like', 'comment', 'reply', 'reaction'].includes(type ?? '') && notification.entityId) {
+      try {
+        const res = await api.getApiPostsId(Number(notification.entityId));
+        if (res.success && res.data && onPostClick) {
+          onPostClick(res.data as PostDto);
+        }
+      } catch { /* ignore */ }
+    } else if (type === 'follow' && notification.actor) {
+      if (onUserClick) {
+        onUserClick({
+          id: String(notification.actor.id),
+          username: notification.actor.username || '',
+          name: notification.actor.fullName || notification.actor.username || 'Unknown',
+          avatar: notification.actor.avatarUrl || '',
+          cover: '',
+          bio: '',
+          followers: '0',
+          following: '0',
+          posts: '0',
+          role: 'Member',
+          isFollowing: notification.actor.isFollowing,
+          displayedBadge: notification.actor.displayedBadge,
+        });
+      }
     }
   };
 
@@ -77,7 +119,12 @@ const NotificationItem = ({ notification, onRead }: NotificationItemProps) => {
   );
 };
 
-const NotificationsView = () => {
+interface NotificationsViewProps {
+  onPostClick?: (post: PostDto) => void;
+  onUserClick?: (user: UserProfile) => void;
+}
+
+const NotificationsView = ({ onPostClick, onUserClick }: NotificationsViewProps) => {
   const api = getSocialNetworkApiV1();
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
   const [loading, setLoading]             = useState(true);
@@ -110,6 +157,7 @@ const NotificationsView = () => {
     setNotifications(prev =>
       prev.map(n => Number(n.id) === id ? { ...n, isRead: true } : n)
     );
+    window.dispatchEvent(new CustomEvent('app:notification-read', { detail: { id } }));
   };
 
   const handleMarkAll = async () => {
@@ -117,6 +165,7 @@ const NotificationsView = () => {
     try {
       await api.putApiNotificationsReadAll();
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      window.dispatchEvent(new CustomEvent('app:notification-read', { detail: { all: true } }));
     } catch { /* ignore */ } finally {
       setMarkingAll(false);
     }
@@ -177,7 +226,14 @@ const NotificationsView = () => {
 
       <div className="space-y-3">
         {filteredNotifications.map(n => (
-          <React.Fragment key={Number(n.id)}><NotificationItem notification={n} onRead={handleRead} /></React.Fragment>
+          <React.Fragment key={Number(n.id)}>
+            <NotificationItem 
+              notification={n} 
+              onRead={handleRead} 
+              onPostClick={onPostClick}
+              onUserClick={onUserClick}
+            />
+          </React.Fragment>
         ))}
       </div>
     </div>

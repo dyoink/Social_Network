@@ -61,9 +61,17 @@ const StoriesRow = ({ refreshKey }: StoriesRowProps) => {
   return (
     <>
       <div className="flex gap-3 mb-6 overflow-x-auto pb-2 scrollbar-thin">
-        {/* Nút tạo story */}
+        {/* Nút tạo / xem story của mình */}
         <button
-          onClick={() => setCreatorOpen(true)}
+          onClick={() => {
+            if (hasMyStory) {
+              // Xem story của mình
+              const myIdx = groups.indexOf(myGroup!);
+              openViewer(myIdx);
+            } else {
+              setCreatorOpen(true);
+            }
+          }}
           className="flex flex-col items-center gap-1.5 shrink-0 group"
         >
           <div className="relative w-16 h-16">

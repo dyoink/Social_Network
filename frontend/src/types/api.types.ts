@@ -38,6 +38,9 @@ export interface UserSummaryDto {
   username: string;
   fullName?: string | null;
   avatarUrl?: string | null;
+  followersCount?: number;
+  isFollowing?: boolean;
+  displayedBadge?: import('../api/api-generated').UserBadgeDto | null;
 }
 
 export interface UpdateUserDto {
@@ -57,11 +60,15 @@ export interface PostDto {
   user: UserSummaryDto;
   content: string;
   imageUrl?: string | null;
+  videoUrl?: string | null;
   createdAt: string;
   updatedAt: string;
   likesCount: number;
   commentsCount: number;
   isLiked: boolean;
+  myReaction?: string | null;
+  reactionCounts?: Record<string, number>;
+  hashtags?: string[];
 }
 
 export interface CreatePostDto {

@@ -49,6 +49,12 @@ namespace SocialNetwork.Api.DTOs.User
         public string? FullName { get; set; }
         public string? AvatarUrl { get; set; }
 
+        /// <summary>Số lượt theo dõi (dùng cho gợi ý)</summary>
+        public int? FollowersCount { get; set; }
+
+        /// <summary>Đã theo dõi bởi currentUser hay chưa</summary>
+        public bool IsFollowing { get; set; }
+
         /// <summary>Badge đang hiển thị (nếu có)</summary>
         public UserBadgeDto? DisplayedBadge { get; set; }
     }
