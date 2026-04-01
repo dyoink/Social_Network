@@ -391,18 +391,23 @@ const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPos
 
       {post.imageUrl && (
         <div className="px-2">
-          <div className="rounded-lg overflow-hidden max-h-[500px]">
-            <img alt="Post" className="w-full h-full object-cover" src={post.imageUrl} referrerPolicy="no-referrer" />
+          <div className="rounded-lg overflow-hidden bg-surface-container-low/30">
+            <img 
+              alt="Post content" 
+              className="w-full max-h-[700px] object-contain mx-auto" 
+              src={post.imageUrl} 
+              referrerPolicy="no-referrer" 
+            />
           </div>
         </div>
       )}
 
       {post.videoUrl && (
         <div className="px-2">
-          <div className="rounded-lg overflow-hidden max-h-[500px]">
+          <div className="rounded-lg overflow-hidden bg-black">
             <video
               src={post.videoUrl}
-              className="w-full h-full object-contain bg-black"
+              className="w-full max-h-[700px] object-contain mx-auto"
               controls
               playsInline
               preload="metadata"

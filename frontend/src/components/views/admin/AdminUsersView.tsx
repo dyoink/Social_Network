@@ -214,7 +214,7 @@ const AdminUsersView = () => {
                 <th className="px-6 py-3 text-left">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                    className="checkbox-custom"
                     checked={users.length > 0 && selectedIds.length === users.length}
                     onChange={toggleSelectAll}
                   />
@@ -231,11 +231,15 @@ const AdminUsersView = () => {
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
               {users.map(user => (
-                <tr key={user.id} className={`hover:bg-surface-container-low/50 transition-colors ${selectedIds.includes(user.id!) ? 'bg-primary/5' : ''}`}>
-                  <td className="px-6 py-4">
+                <tr 
+                  key={user.id} 
+                  className={`hover:bg-surface-container-low/50 transition-colors cursor-pointer ${selectedIds.includes(user.id!) ? 'bg-primary/5' : ''}`}
+                  onClick={() => toggleSelect(user.id!)}
+                >
+                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
-                      className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                      className="checkbox-custom"
                       checked={selectedIds.includes(user.id!)}
                       onChange={() => toggleSelect(user.id!)}
                     />
@@ -259,7 +263,7 @@ const AdminUsersView = () => {
                   <td className="px-4 py-4 text-center text-on-surface-variant">{user.postCount ?? 0}</td>
                   <td className="px-4 py-4 text-center text-on-surface-variant">{user.followerCount ?? 0}</td>
                   <td className="px-4 py-4 text-outline text-xs whitespace-nowrap">{timeAgo(user.createdAt?.toString())}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       {actionId === user.id ? (
                         <Loader className="w-4 h-4 animate-spin text-outline" />

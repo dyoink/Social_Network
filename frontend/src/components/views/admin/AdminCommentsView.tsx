@@ -136,7 +136,7 @@ const AdminCommentsView = () => {
                 <th className="px-6 py-3 text-left">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                    className="checkbox-custom"
                     checked={comments.length > 0 && selectedIds.length === comments.length}
                     onChange={toggleSelectAll}
                   />
@@ -151,11 +151,15 @@ const AdminCommentsView = () => {
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
               {comments.map(comment => (
-                <tr key={comment.id} className={`hover:bg-surface-container-low/50 transition-colors ${selectedIds.includes(comment.id!) ? 'bg-primary/5' : ''}`}>
-                  <td className="px-6 py-4">
+                <tr 
+                  key={comment.id} 
+                  className={`hover:bg-surface-container-low/50 transition-colors cursor-pointer ${selectedIds.includes(comment.id!) ? 'bg-primary/5' : ''}`}
+                  onClick={() => toggleSelect(comment.id!)}
+                >
+                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
-                      className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                      className="checkbox-custom"
                       checked={selectedIds.includes(comment.id!)}
                       onChange={() => toggleSelect(comment.id!)}
                     />
@@ -178,7 +182,7 @@ const AdminCommentsView = () => {
                     )}
                   </td>
                   <td className="px-4 py-4 text-outline text-xs whitespace-nowrap">{timeAgo(comment.createdAt?.toString())}</td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
                     {actionId === comment.id ? (
                       <Loader className="w-4 h-4 animate-spin text-outline ml-auto" />
                     ) : (

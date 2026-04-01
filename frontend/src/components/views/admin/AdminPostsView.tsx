@@ -129,7 +129,7 @@ const AdminPostsView = () => {
                 <th className="px-6 py-3 text-left">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                    className="checkbox-custom"
                     checked={posts.length > 0 && selectedIds.length === posts.length}
                     onChange={toggleSelectAll}
                   />
@@ -146,11 +146,15 @@ const AdminPostsView = () => {
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
               {posts.map(post => (
-                <tr key={post.id} className={`hover:bg-surface-container-low/50 transition-colors ${selectedIds.includes(post.id!) ? 'bg-primary/5' : ''} ${Number(post.reportCount ?? 0) > 0 ? 'bg-red-50/30 dark:bg-red-500/5' : ''}`}>
-                  <td className="px-6 py-4">
+                <tr 
+                  key={post.id} 
+                  className={`hover:bg-surface-container-low/50 transition-colors cursor-pointer ${selectedIds.includes(post.id!) ? 'bg-primary/5' : ''} ${Number(post.reportCount ?? 0) > 0 ? 'bg-red-50/30 dark:bg-red-500/5' : ''}`}
+                  onClick={() => toggleSelect(post.id!)}
+                >
+                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
-                      className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                      className="checkbox-custom"
                       checked={selectedIds.includes(post.id!)}
                       onChange={() => toggleSelect(post.id!)}
                     />
@@ -171,7 +175,7 @@ const AdminPostsView = () => {
                     ) : <span className="text-outline">—</span>}
                   </td>
                   <td className="px-4 py-4 text-outline text-xs whitespace-nowrap">{timeAgo(post.createdAt?.toString())}</td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
                       {actionId === post.id ? <Loader className="w-4 h-4 animate-spin text-outline" /> : (
                         <>

@@ -79,7 +79,7 @@ const UserCard = ({ user, onUserClick }: { user: UserSummaryDto; onUserClick: (u
 
 // ─── SearchView ────────────────────────────────────────────────────────────────
 
-type Tab = 'all' | 'people' | 'posts' | 'images' | 'videos';
+type Tab = 'all' | 'people' | 'posts' | 'images' | 'videos' | 'groups';
 
 interface SearchViewProps {
   onCommentClick: (post: PostDto) => void;
@@ -172,6 +172,7 @@ const SearchView = ({ onCommentClick, onUserClick, onHashtagClick }: SearchViewP
     { key: 'posts',  label: 'Bài viết',   icon: <Hash className="w-4 h-4" /> },
     { key: 'images', label: 'Hình ảnh',   icon: <ImageIcon className="w-4 h-4" /> },
     { key: 'videos', label: 'Video',      icon: <Video className="w-4 h-4" /> },
+    { key: 'groups', label: 'Nhóm',       icon: <Users className="w-4 h-4" /> },
   ];
 
   // Filtering results based on tab
@@ -183,6 +184,7 @@ const SearchView = ({ onCommentClick, onUserClick, onHashtagClick }: SearchViewP
 
   const showUsers = (activeTab === 'all' || activeTab === 'people') && users.length > 0;
   const showPosts = (activeTab === 'all' || activeTab === 'posts' || activeTab === 'images' || activeTab === 'videos') && filteredPosts.length > 0;
+  const showGroups = activeTab === 'groups';
   const hasResults = showUsers || showPosts;
 
   return (
@@ -219,74 +221,95 @@ const SearchView = ({ onCommentClick, onUserClick, onHashtagClick }: SearchViewP
 
       {/* Empty State: Recent, Trending, Suggestions */}
       {!searched && !loading && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Recent & Trending */}
-          <div className="lg:col-span-8 space-y-8">
-            {recentSearches.length > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-headline font-bold text-lg text-on-surface">Tìm kiếm gần đây</h3>
-                  <button onClick={() => { setRecentSearches([]); localStorage.removeItem('recent_searches'); }} className="text-xs font-bold text-primary hover:underline">Xóa tất cả</button>
-                </div>
-                <div className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/10">
-                  {recentSearches.map(s => (
-                    <div key={s} className="group flex items-center justify-between px-5 py-3 hover:bg-surface-container-low cursor-pointer transition-colors" onClick={() => setQuery(s)}>
-                      <div className="flex items-center gap-4 text-on-surface-variant">
-                        <Clock className="w-4 h-4 text-outline" />
-                        <span className="text-sm font-medium">{s}</span>
+        <div className="space-y-10">
+          {/* Top Section: Recent & Trending */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-12 space-y-8">
+              {recentSearches.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-headline font-bold text-lg text-on-surface">Tìm kiếm gần đây</h3>
+                    <button onClick={() => { setRecentSearches([]); localStorage.removeItem('recent_searches'); }} className="text-xs font-bold text-primary hover:underline">Xóa tất cả</button>
+                  </div>
+                  <div className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/10">
+                    {recentSearches.map(s => (
+                      <div key={s} className="group flex items-center justify-between px-5 py-3 hover:bg-surface-container-low cursor-pointer transition-colors" onClick={() => setQuery(s)}>
+                        <div className="flex items-center gap-4 text-on-surface-variant">
+                          <Clock className="w-4 h-4 text-outline" />
+                          <span className="text-sm font-medium">{s}</span>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); removeRecentSearch(s); }} className="p-1 opacity-0 group-hover:opacity-100 text-outline hover:text-error transition-all">
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); removeRecentSearch(s); }} className="p-1 opacity-0 group-hover:opacity-100 text-outline hover:text-error transition-all">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Trending Pills */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  <h3 className="font-headline font-bold text-lg text-on-surface">Xu hướng</h3>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {emptyLoading ? (
+                    Array(5).fill(0).map((_, i) => <div key={i} className="h-10 w-24 bg-surface-container-low animate-pulse rounded-full" />)
+                  ) : trending.map((t, i) => (
+                    <button 
+                      key={t.tag} 
+                      onClick={() => { if (onHashtagClick) onHashtagClick(t.tag!); else setQuery(`#${t.tag}`); }}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-surface-container-lowest border border-outline-variant/20 rounded-full text-sm font-bold text-on-surface-variant hover:border-primary hover:text-primary transition-all hover:scale-105 active:scale-95 shadow-sm"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] text-primary">
+                        {i + 1}
+                      </div>
+                      #{t.tag}
+                    </button>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Trending Pills */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-primary" />
-                <h3 className="font-headline font-bold text-lg text-on-surface">Xu hướng</h3>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {emptyLoading ? (
-                  Array(5).fill(0).map((_, i) => <div key={i} className="h-10 w-24 bg-surface-container-low animate-pulse rounded-full" />)
-                ) : trending.map(t => (
-                  <button 
-                    key={t.tag} 
-                    onClick={() => { if (onHashtagClick) onHashtagClick(t.tag!); else setQuery(`#${t.tag}`); }}
-                    className="px-5 py-2.5 bg-surface-container-lowest border border-outline-variant/20 rounded-full text-sm font-bold text-on-surface-variant hover:border-primary hover:text-primary transition-all hover:scale-105 active:scale-95"
-                  >
-                    #{t.tag}
-                  </button>
-                ))}
               </div>
             </div>
           </div>
 
-          {/* Suggestions Sidebar */}
-          <div className="lg:col-span-4 space-y-6">
+          {/* Suggestions Horizontal Scroll Bar */}
+          <div className="space-y-4">
             <div className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" />
               <h3 className="font-headline font-bold text-lg text-on-surface">Gợi ý cho bạn</h3>
             </div>
-            <div className="space-y-3">
+            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x">
               {emptyLoading ? (
-                Array(3).fill(0).map((_, i) => <div key={i} className="h-16 w-full bg-surface-container-low animate-pulse rounded-2xl" />)
-              ) : suggestions.map(user => (
+                Array(5).fill(0).map((_, i) => (
+                  <div key={i} className="w-40 h-48 bg-surface-container-low animate-pulse rounded-3xl shrink-0" />
+                ))
+              ) : suggestions.slice(0, 5).map(user => (
                 <div 
                   key={user.id} 
-                  className="flex items-center gap-3 p-3 bg-surface-container-lowest rounded-2xl border border-outline-variant/10 hover:border-primary/20 cursor-pointer transition-all"
+                  className="group flex flex-col items-center text-center p-5 bg-surface-container-lowest rounded-3xl border border-outline-variant/10 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5 transition-all cursor-pointer shrink-0 w-40 snap-start"
                   onClick={() => onUserClick(summaryToProfile(user))}
                 >
-                  <img src={user.avatarUrl || `https://picsum.photos/seed/${user.id}/100/100`} alt="" className="w-10 h-10 rounded-full object-cover" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-on-surface truncate">{user.fullName || user.username}</p>
-                    <p className="text-xs text-outline truncate">@{user.username}</p>
+                  <div className="relative mb-3">
+                    <img 
+                      src={user.avatarUrl || `https://picsum.photos/seed/${user.id}/100/100`} 
+                      alt="" 
+                      className="w-20 h-20 rounded-full object-cover ring-4 ring-primary/5 group-hover:ring-primary/20 transition-all" 
+                    />
+                    <div className="absolute -bottom-1 -right-1 bg-primary text-white p-1 rounded-full shadow-lg">
+                      <UserPlus className="w-3 h-3" />
+                    </div>
                   </div>
-                  <button className="text-[10px] font-bold text-primary px-3 py-1.5 rounded-full bg-primary/5 hover:bg-primary hover:text-white transition-all">Follow</button>
+                  <div className="w-full min-w-0 mb-3">
+                    <p className="text-sm font-bold text-on-surface truncate">{user.fullName || user.username}</p>
+                    <p className="text-[10px] text-outline truncate">@{user.username}</p>
+                  </div>
+                  <button 
+                    className="w-full text-[11px] font-bold py-2 rounded-xl bg-primary text-on-primary hover:brightness-110 active:scale-95 transition-all shadow-md shadow-primary/20"
+                    onClick={(e) => { e.stopPropagation(); /* handle follow */ }}
+                  >
+                    Theo dõi
+                  </button>
                 </div>
               ))}
             </div>
@@ -295,7 +318,7 @@ const SearchView = ({ onCommentClick, onUserClick, onHashtagClick }: SearchViewP
       )}
 
       {/* Results State */}
-      {searched && !loading && !hasResults && (
+      {searched && !loading && !hasResults && !showGroups && (
         <div className="text-center py-20 text-outline bg-surface-container-lowest rounded-3xl surface-elevation-tonal">
           <Users className="w-16 h-16 mx-auto mb-4 opacity-20" />
           <p className="text-xl font-headline font-bold text-on-surface">Không tìm thấy kết quả</p>
@@ -304,7 +327,15 @@ const SearchView = ({ onCommentClick, onUserClick, onHashtagClick }: SearchViewP
         </div>
       )}
 
-      {searched && hasResults && (
+      {searched && showGroups && (
+        <div className="text-center py-20 text-outline bg-surface-container-lowest rounded-3xl surface-elevation-tonal">
+          <Users className="w-16 h-16 mx-auto mb-4 opacity-20" />
+          <p className="text-xl font-headline font-bold text-on-surface">Chức năng Nhóm đang phát triển</p>
+          <p className="text-sm mt-1">Hãy quay lại sau nhé!</p>
+        </div>
+      )}
+
+      {searched && hasResults && !showGroups && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* People */}
           {showUsers && (

@@ -173,11 +173,17 @@ const AdminSeedView = () => {
 
         <div className="flex gap-6 pt-2">
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={options.includeMessages} onChange={e => set('includeMessages', e.target.checked)} className="w-4 h-4 accent-primary rounded" />
+            <input type="checkbox"
+              checked={options.includeMessages}
+              onChange={e => set('includeMessages', e.target.checked)}
+              className="checkbox-custom" />
             <span className="text-sm text-on-surface">Tạo Conversations + Messages</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={options.includeStories} onChange={e => set('includeStories', e.target.checked)} className="w-4 h-4 accent-primary rounded" />
+            <input type="checkbox"
+              checked={options.includeStories}
+              onChange={e => set('includeStories', e.target.checked)}
+              className="checkbox-custom" />
             <span className="text-sm text-on-surface">Tạo Stories</span>
           </label>
         </div>

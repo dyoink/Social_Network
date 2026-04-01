@@ -189,7 +189,7 @@ const AdminReportsView = () => {
                 <th className="px-6 py-3 text-left">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                    className="checkbox-custom"
                     checked={reports.length > 0 && selectedIds.length === reports.length}
                     onChange={toggleSelectAll}
                   />
@@ -205,11 +205,15 @@ const AdminReportsView = () => {
             </thead>
             <tbody className="divide-y divide-outline-variant/10">
               {reports.map(report => (
-                <tr key={report.id} className={`hover:bg-surface-container-low/50 transition-colors ${selectedIds.includes(report.id!) ? 'bg-primary/5' : ''}`}>
-                  <td className="px-6 py-4">
+                <tr 
+                  key={report.id} 
+                  className={`hover:bg-surface-container-low/50 transition-colors cursor-pointer ${selectedIds.includes(report.id!) ? 'bg-primary/5' : ''}`}
+                  onClick={() => toggleSelect(report.id!)}
+                >
+                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
-                      className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/30"
+                      className="checkbox-custom"
                       checked={selectedIds.includes(report.id!)}
                       onChange={() => toggleSelect(report.id!)}
                     />
@@ -245,7 +249,7 @@ const AdminReportsView = () => {
                     )}
                   </td>
                   <td className="px-4 py-4 text-outline text-xs whitespace-nowrap">{timeAgo(report.createdAt?.toString())}</td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-2">
                       {report.status !== 'Resolved' && (
                         actionId === report.id ? (

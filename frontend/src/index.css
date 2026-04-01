@@ -92,6 +92,34 @@
   .btn-primary {
     @apply bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-full font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all hover:brightness-110;
   }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-outline/20 rounded-full hover:bg-outline/40 transition-colors;
+  }
+
+  /* Custom Rounded Checkbox */
+  input[type="checkbox"] {
+    @apply appearance-none w-5 h-5 border-2 border-outline-variant rounded-[6px] cursor-pointer transition-all relative flex-shrink-0;
+    @apply checked:bg-primary checked:border-primary;
+  }
+
+  input[type="checkbox"]:checked::after {
+    content: '';
+    @apply absolute left-[5px] top-[1px] w-[6px] h-[10px] border-white border-r-2 border-b-2 rotate-45;
+  }
+
+  input[type="checkbox"]:focus-visible {
+    @apply outline-none ring-2 ring-primary/30 ring-offset-2;
+  }
 }
 
 /* Fallback for Elephant font if not available locally */

@@ -248,8 +248,8 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, onNavigateSettings }:
               {showVideoInput && (
                 <div className="mt-3 mb-2">
                   {videoUrl ? (
-                    <div className="relative rounded-xl overflow-hidden bg-black">
-                      <video src={videoUrl} className="w-full max-h-64 object-contain" controls />
+                    <div className="relative rounded-xl overflow-hidden bg-black flex items-center justify-center min-h-[200px]">
+                      <video src={videoUrl} className="w-full max-h-[500px] object-contain" controls />
                       <button
                         type="button"
                         onClick={() => setVideoUrl(undefined)}

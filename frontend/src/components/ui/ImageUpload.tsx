@@ -53,7 +53,7 @@ const ImageUpload = ({ value, onChange, placeholder = 'Chọn ảnh', variant = 
     : `relative w-full rounded-xl overflow-hidden ${className}`;
   const previewClass = isAvatar
     ? 'w-full h-full object-cover'
-    : 'w-full h-48 object-cover';
+    : 'w-full max-h-[500px] object-contain bg-surface-container-low/30';
   const emptyClass = isAvatar
     ? 'flex items-center justify-center w-full h-full bg-surface-container'
     : 'flex flex-col items-center justify-center gap-2 w-full h-48 bg-surface-container-low border-2 border-dashed border-outline-variant hover:border-primary/50 transition-colors';

@@ -7,6 +7,7 @@ import { useFeed } from '../../hooks/useFeed';
 import PostCard from '../feed/PostCard';
 import PostCardSkeleton from '../ui/PostCardSkeleton';
 import StoriesRow from '../stories/StoriesRow';
+import SuggestionsRow from '../feed/SuggestionsRow';
 import { UserProfile } from '../../types';
 
 interface NewsfeedViewProps {
@@ -82,6 +83,9 @@ const NewsfeedView = ({ onOpenCreate, onCommentClick, refreshKey, onHashtagClick
           </button>
         </div>
       </div>
+
+      {/* Suggested for you (Horizontal row) */}
+      <SuggestionsRow onUserClick={onUserClick!} />
 
       {/* Error state */}
       {error && (
