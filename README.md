@@ -99,7 +99,6 @@ dotnet run
 ```
 
 Backend chạy tại: **http://localhost:5204**
-Xem api docs tại: **http://localhost:5204/scalar**
 
 ### Bước 3 — Cài đặt & chạy Frontend
 
