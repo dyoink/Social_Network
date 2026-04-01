@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useCallback, useRef } from 'react';
+import { ReactNode, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Camera, Settings, LayoutGrid, MapPin, Share2, UserPlus, UserMinus, MessageSquare, Loader, AlertCircle, X, Check, CalendarDays, Info, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getSocialNetworkApiV1, type PostDto, type BadgeProgressDto, type UserBadgeDto } from '../../api/api-generated';
@@ -10,6 +10,7 @@ import ImageUpload from '../ui/ImageUpload';
 import BadgeChip from '../ui/BadgeChip';
 import { formatCount } from '../../utils/time';
 import PokeModal from '../poke/PokeModal';
+import UsersModal from '../ui/UsersModal';
 
 interface ProfileViewProps {
   user?: UserProfile;
@@ -17,10 +18,19 @@ interface ProfileViewProps {
   /** Chuyển sang Messenger và mở conversation với user này */
   onMessageClick?: (userId: number) => void;
   onHashtagClick?: (tag: string) => void;
+  onUserClick?: (user: UserProfile) => void;
 }
 
-const Stat = ({ value, label, border }: { value: string; label: string; border?: boolean }) => (
-  <div className={`text-center md:text-left ${border ? 'border-x border-outline-variant/30 px-6' : ''}`}>
+const Stat = ({ value, label, border, onClick }: { value: string; label: string; border?: boolean; onClick?: () => void }) => (
+  <div 
+    className={`text-center md:text-left ${border ? 'border-x border-outline-variant/30 px-6' : ''} ${onClick ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}
+    onClick={(e) => {
+      if (onClick) {
+        e.stopPropagation();
+        onClick();
+      }
+    }}
+  >
     <span className="block font-bold text-lg text-on-surface">{value}</span>
     <span className="text-xs text-outline uppercase tracking-wider font-semibold">{label}</span>
   </div>
@@ -33,8 +43,8 @@ const IntroItem = ({ icon, text, isLink }: { icon: ReactNode; text: string; isLi
   </div>
 );
 
-const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: ProfileViewProps) => {
-  const api = getSocialNetworkApiV1();
+const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onUserClick }: ProfileViewProps) => {
+  const api = useMemo(() => getSocialNetworkApiV1(), []);
   const { user: currentUser, updateUser } = useAuthStore();
 
   // posts state
@@ -52,6 +62,16 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
 
   const userId = user ? Number(user.id) : null;
   const isMe   = userId !== null && currentUser ? Number(currentUser.id) === userId : false;
+
+  // Users modal state
+  const [showUsersModal, setShowUsersModal] = useState(false);
+  const [usersModalType, setUsersModalType] = useState<'followers' | 'following'>('followers');
+
+  const openUsersModal = (type: 'followers' | 'following') => {
+    if (!userId) return;
+    setUsersModalType(type);
+    setShowUsersModal(true);
+  };
 
   // Fetch user data để sync mới nhất (isFollowing, counts, badges...)
   const fetchUserData = useCallback(async () => {
@@ -308,8 +328,8 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
                 <p className="text-on-surface-variant mt-1 max-w-lg leading-relaxed">{(internalUser || user)?.bio}</p>
               )}
               <div className="flex items-center justify-center md:justify-start gap-6 mt-4">
-                <Stat value={(internalUser || user)?.following ?? '0'} label="Following" />
-                <Stat value={formatCount(followersCount)} label="Followers" border />
+                <Stat value={(internalUser || user)?.following ?? '0'} label="Following" onClick={() => openUsersModal('following')} />
+                <Stat value={formatCount(followersCount)} label="Followers" border onClick={() => openUsersModal('followers')} />
                 <Stat value={(internalUser || user)?.posts ?? '0'} label="Bài viết" />
               </div>
             </div>
@@ -496,11 +516,17 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
                 <span className="block font-bold text-xl text-on-surface">{(internalUser || user)?.posts ?? '0'}</span>
                 <span className="text-xs text-outline">Bài viết</span>
               </div>
-              <div className="text-center p-4 bg-surface-container-low rounded-xl">
+              <div 
+                className="text-center p-4 bg-surface-container-low rounded-xl cursor-pointer hover:bg-surface-container transition-colors"
+                onClick={(e) => { e.stopPropagation(); openUsersModal('followers'); }}
+              >
                 <span className="block font-bold text-xl text-on-surface">{formatCount(followersCount)}</span>
                 <span className="text-xs text-outline">Followers</span>
               </div>
-              <div className="text-center p-4 bg-surface-container-low rounded-xl">
+              <div 
+                className="text-center p-4 bg-surface-container-low rounded-xl cursor-pointer hover:bg-surface-container transition-colors"
+                onClick={(e) => { e.stopPropagation(); openUsersModal('following'); }}
+              >
                 <span className="block font-bold text-xl text-on-surface">{(internalUser || user)?.following ?? '0'}</span>
                 <span className="text-xs text-outline">Following</span>
               </div>
@@ -696,6 +722,17 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick }: P
           targetName={(internalUser || user)!.name}
           isOpen={showPokeModal}
           onClose={() => setShowPokeModal(false)}
+        />
+      )}
+
+      {/* Users Modal (Followers/Following) */}
+      {userId && (
+        <UsersModal
+          userId={userId}
+          type={usersModalType}
+          isOpen={showUsersModal}
+          onClose={() => setShowUsersModal(false)}
+          onUserClick={onUserClick}
         />
       )}
     </div>

@@ -185,7 +185,7 @@ export default function App() {
                   transition={{ duration: 0.2 }}
                 >
                   {currentView === 'newsfeed' && <NewsfeedView onOpenCreate={() => setIsCreateOpen(true)} onCommentClick={setActiveCommentPost} refreshKey={feedRefreshKey} onHashtagClick={handleHashtagClick} />}
-                  {currentView === 'profile' && <ProfileView user={selectedUser ?? undefined} onCommentClick={setActiveCommentPost} onMessageClick={handleMessageUser} onHashtagClick={handleHashtagClick} />}
+                  {currentView === 'profile' && <ProfileView user={selectedUser ?? undefined} onCommentClick={setActiveCommentPost} onMessageClick={handleMessageUser} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
                   {currentView === 'messenger' && <MessengerView targetUserId={messengerTargetUserId} />}
                   {currentView === 'search' && <SearchView onCommentClick={setActiveCommentPost} onUserClick={handleViewProfile} onHashtagClick={handleHashtagClick} />}
                   {currentView === 'notifications' && (
