@@ -1,18 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Hash, ArrowLeft, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getSocialNetworkApiV1, type PostDto, type TrendingHashtagDto } from '../../api/api-generated';
+import { getSocialNetworkApiV1, type PostDto } from '../../api/api-generated';
 import PostCard from '../feed/PostCard';
 import PostCardSkeleton from '../ui/PostCardSkeleton';
+import { UserProfile } from '../../types';
 
 interface HashtagViewProps {
   tag: string;
   onBack: () => void;
-  onCommentClick?: (post: PostDto) => void;
-  onHashtagClick: (tag: string) => void;
+  onCommentClick: (post: PostDto) => void;
+  onHashtagClick?: (tag: string) => void;
+  onUserClick?: (user: UserProfile) => void;
 }
 
-const HashtagView = ({ tag, onBack, onCommentClick, onHashtagClick }: HashtagViewProps) => {
+const HashtagView = ({ tag, onBack, onCommentClick, onHashtagClick, onUserClick }: HashtagViewProps) => {
   const api = getSocialNetworkApiV1();
   const [posts, setPosts] = useState<PostDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,6 +148,7 @@ const HashtagView = ({ tag, onBack, onCommentClick, onHashtagClick }: HashtagVie
               post={post}
               onCommentClick={onCommentClick}
               onHashtagClick={onHashtagClick}
+              onUserClick={onUserClick}
               onPostDeleted={(id) => setPosts(prev => prev.filter(p => Number(p.id) !== id))}
               onPostUpdated={(id, updates) => setPosts(prev => prev.map(p => Number(p.id) === id ? { ...p, ...updates } : p))}
             />

@@ -209,6 +209,7 @@ const SearchView = ({ onCommentClick, onUserClick, onHashtagClick }: SearchViewP
                     post={p}
                     onCommentClick={onCommentClick}
                     onHashtagClick={onHashtagClick}
+                    onUserClick={onUserClick}
                   />
                 </React.Fragment>
               ))}

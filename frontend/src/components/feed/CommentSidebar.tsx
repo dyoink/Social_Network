@@ -2,18 +2,57 @@ import { useState, useEffect, useRef } from 'react';
 import React from 'react';
 import { X, ArrowRight, Loader, AlertCircle, CornerDownRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getSocialNetworkApiV1, type PostDto, type CommentDto } from '../../api/api-generated';
+import { getSocialNetworkApiV1, type PostDto, type CommentDto, type UserSummaryDto, type UserDto } from '../../api/api-generated';
 import useAuthStore from '../../store/authStore';
 import { timeAgo } from '../../utils/time';
 import BadgeChip from '../ui/BadgeChip';
+import { UserProfile } from '../../types';
 
 interface CommentItemProps {
   comment: CommentDto;
   onReply: (comment: CommentDto) => void;
+  onUserClick?: (user: UserProfile) => void;
+}
+
+// Helper to convert UserSummaryDto to UserProfile (legacy compatibility)
+function summaryToProfile(u: UserSummaryDto): UserProfile {
+  return {
+    id: String(u.id ?? ''),
+    name: u.fullName || u.username || 'Unknown',
+    username: u.username || '',
+    avatar: u.avatarUrl || `https://picsum.photos/seed/${u.id}/100/100`,
+    cover: `https://picsum.photos/seed/cover${u.id}/1200/400`,
+    bio: '',
+    role: 'Thành viên',
+    followers: String(u.followersCount ?? 0),
+    following: '0',
+    posts: '0',
+    isFollowing: false,
+    displayedBadge: u.displayedBadge,
+  };
+}
+
+// Helper for UserDto (from post author)
+function userDtoToProfile(user: UserDto): UserProfile {
+  return {
+    id: String(user.id ?? ''),
+    username: user.username || '',
+    name: user.fullName || user.username || 'Unknown',
+    avatar: user.avatarUrl || `https://picsum.photos/seed/${user.username}/200/200`,
+    cover: user.coverUrl || 'https://picsum.photos/seed/cover/1200/400',
+    bio: user.bio || '',
+    role: user.role || 'Member',
+    followers: String(user.followersCount ?? 0),
+    following: String(user.followingCount ?? 0),
+    posts: String(user.postsCount ?? 0),
+    isFollowing: user.isFollowing,
+    createdAt: user.createdAt,
+    displayedBadge: user.displayedBadge,
+  };
 }
 
 // Một comment đơn (có thể là reply)
-const CommentItem = ({ comment, onReply }: CommentItemProps) => {
+const CommentItem = ({ comment, onReply, onUserClick }: CommentItemProps) => {
   const api = getSocialNetworkApiV1();
   const authorName  = comment.user?.fullName || comment.user?.username || 'Someone';
   const authorAvatar = comment.user?.avatarUrl || `https://picsum.photos/seed/${comment.user?.id}/50/50`;
@@ -40,17 +79,24 @@ const CommentItem = ({ comment, onReply }: CommentItemProps) => {
     }
   };
 
+  const handleUserClick = () => {
+    if (comment.user && onUserClick) {
+      onUserClick(summaryToProfile(comment.user));
+    }
+  };
+
   return (
     <div className="flex gap-3">
       <img
         alt={authorName}
         src={authorAvatar}
-        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+        className="w-8 h-8 rounded-full object-cover flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
         referrerPolicy="no-referrer"
+        onClick={handleUserClick}
       />
       <div className="flex-1">
         <div className="bg-surface-container-low rounded-2xl p-3">
-          <h5 className="text-xs font-bold text-on-surface mb-1">
+          <h5 className="text-xs font-bold text-on-surface mb-1 cursor-pointer hover:text-primary transition-colors" onClick={handleUserClick}>
             {authorName}
             {comment.user?.displayedBadge && (
               <span className="ml-1 align-middle"><BadgeChip badge={comment.user.displayedBadge} /></span>
@@ -89,12 +135,27 @@ const CommentItem = ({ comment, onReply }: CommentItemProps) => {
             {replies.map(reply => {
               const replyAuthor = reply.user?.fullName || reply.user?.username || 'Someone';
               const replyAvatar = reply.user?.avatarUrl || `https://picsum.photos/seed/${reply.user?.id}/50/50`;
+              
+              const handleReplyUserClick = () => {
+                if (reply.user && onUserClick) {
+                  onUserClick(summaryToProfile(reply.user));
+                }
+              };
+
               return (
                 <div key={String(reply.id)} className="flex gap-2">
-                  <img src={replyAvatar} alt={replyAuthor} className="w-6 h-6 rounded-full object-cover flex-shrink-0" referrerPolicy="no-referrer" />
+                  <img 
+                    src={replyAvatar} 
+                    alt={replyAuthor} 
+                    className="w-6 h-6 rounded-full object-cover flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" 
+                    referrerPolicy="no-referrer" 
+                    onClick={handleReplyUserClick}
+                  />
                   <div className="flex-1">
                     <div className="bg-surface-container-low rounded-2xl p-2.5">
-                      <h5 className="text-[11px] font-bold text-on-surface mb-0.5">{replyAuthor}</h5>
+                      <h5 className="text-[11px] font-bold text-on-surface mb-0.5 cursor-pointer hover:text-primary transition-colors" onClick={handleReplyUserClick}>
+                        {replyAuthor}
+                      </h5>
                       <p className="text-xs text-on-surface-variant leading-snug">{reply.content}</p>
                     </div>
                     <span className="text-[10px] text-outline ml-2">{timeAgo(reply.createdAt)}</span>
@@ -114,9 +175,10 @@ interface CommentSidebarProps {
   onClose: () => void;
   /** Gọi khi thêm comment/reply mới để cập nhật commentsCount ở feed */
   onCommentAdded?: () => void;
+  onUserClick?: (user: UserProfile) => void;
 }
 
-const CommentSidebar = ({ post, onClose, onCommentAdded }: CommentSidebarProps) => {
+const CommentSidebar = ({ post, onClose, onCommentAdded, onUserClick }: CommentSidebarProps) => {
   const api = getSocialNetworkApiV1();
   const { user: currentUser } = useAuthStore();
 
@@ -198,6 +260,12 @@ const CommentSidebar = ({ post, onClose, onCommentAdded }: CommentSidebarProps) 
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
+  const handleAuthorClick = () => {
+    if (post.user && onUserClick) {
+      onUserClick(userDtoToProfile(post.user));
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -222,8 +290,16 @@ const CommentSidebar = ({ post, onClose, onCommentAdded }: CommentSidebarProps) 
       {/* Post snippet */}
       <div className="px-6 pb-2 border-b border-surface-container">
         <div className="flex items-center gap-3 mb-2">
-          <img alt={authorName} src={authorAvatar} className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
-          <p className="text-xs font-bold text-on-surface">{authorName}</p>
+          <img 
+            alt={authorName} 
+            src={authorAvatar} 
+            className="w-8 h-8 rounded-full cursor-pointer hover:opacity-80 transition-opacity" 
+            referrerPolicy="no-referrer" 
+            onClick={handleAuthorClick}
+          />
+          <p className="text-xs font-bold text-on-surface cursor-pointer hover:text-primary transition-colors" onClick={handleAuthorClick}>
+            {authorName}
+          </p>
         </div>
         <p className="text-sm text-on-surface-variant line-clamp-2">{post.content}</p>
       </div>
@@ -249,7 +325,7 @@ const CommentSidebar = ({ post, onClose, onCommentAdded }: CommentSidebarProps) 
 
         {comments.map((comment: CommentDto) => (
           <React.Fragment key={String(comment.id)}>
-            <CommentItem comment={comment} onReply={handleReply} />
+            <CommentItem comment={comment} onReply={handleReply} onUserClick={onUserClick} />
           </React.Fragment>
         ))}
       </div>

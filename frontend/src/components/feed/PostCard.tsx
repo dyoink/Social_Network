@@ -88,10 +88,30 @@ interface PostCardProps {
   onPostDeleted?: (postId: number) => void;
   onPostUpdated?: (postId: number, updates: Partial<PostDto>) => void;
   onHashtagClick?: (tag: string) => void;
+  onUserClick?: (user: UserProfile) => void;
+}
+
+/** Chuyển đổi UserDto (backend) sang UserProfile (legacy compatibility) */
+function userDtoToProfile(user: UserDto): UserProfile {
+  return {
+    id: String(user.id ?? ''),
+    username: user.username || '',
+    name: user.fullName || user.username || 'Unknown',
+    avatar: user.avatarUrl || `https://picsum.photos/seed/${user.username}/200/200`,
+    cover: user.coverUrl || 'https://picsum.photos/seed/cover/1200/400',
+    bio: user.bio || '',
+    role: user.role || 'Member',
+    followers: String(user.followersCount ?? 0),
+    following: String(user.followingCount ?? 0),
+    posts: String(user.postsCount ?? 0),
+    isFollowing: user.isFollowing,
+    createdAt: user.createdAt,
+    displayedBadge: user.displayedBadge,
+  };
 }
 
 /** Parse #hashtag và @mention trong content → JSX với highlight */
-function renderContentWithHashtags(content: string, onHashtagClick?: (tag: string) => void) {
+function renderContentWithHashtags(content: string, onHashtagClick?: (tag: string) => void, onUserClick?: (u: UserProfile) => void) {
   // Match #hashtag hoặc @username
   const parts = content.split(/(#\w+|@\w+)/g);
   return parts.map((part, i) => {
@@ -115,7 +135,7 @@ function renderContentWithHashtags(content: string, onHashtagClick?: (tag: strin
   });
 }
 
-const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPostDeleted, onPostUpdated, onHashtagClick }) => {
+const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPostDeleted, onPostUpdated, onHashtagClick, onUserClick }) => {
   const api = getSocialNetworkApiV1();
   const { user: currentUser } = useAuthStore();
 
@@ -150,6 +170,13 @@ const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPos
   const [deleting, setDeleting] = useState(false);
 
   const isOwner = currentUser && post.user && Number(currentUser.id) === Number(post.user.id);
+
+  const handleAuthorClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (post.user && onUserClick) {
+      onUserClick(userDtoToProfile(post.user));
+    }
+  };
 
   const handleCommentToggle = () => {
     if (onCommentClick && window.innerWidth >= 1024) {
@@ -251,12 +278,12 @@ const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPos
     <article className="bg-surface-container-lowest rounded-xl surface-elevation-tonal overflow-hidden">
       <div className="p-6">
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary/5 flex-shrink-0">
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={handleAuthorClick}>
+            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary/5 flex-shrink-0 group-hover:ring-2 group-hover:ring-primary/20 transition-all">
               <img alt={authorName} src={authorAvatar} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
             </div>
             <div>
-              <h4 className="font-headline font-bold text-on-surface leading-tight">
+              <h4 className="font-headline font-bold text-on-surface leading-tight group-hover:text-primary transition-colors">
                 {authorName}
                 {post.user?.displayedBadge && (
                   <span className="ml-1.5 align-middle"><BadgeChip badge={post.user.displayedBadge} /></span>
@@ -335,7 +362,7 @@ const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPos
         ) : (
           <>
             <p className="text-on-surface-variant leading-relaxed mb-5 whitespace-pre-wrap">
-              {renderContentWithHashtags(post.content ?? '', onHashtagClick)}
+              {renderContentWithHashtags(post.content ?? '', onHashtagClick, onUserClick)}
             </p>
             {deleteConfirm && (
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm">

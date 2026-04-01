@@ -7,15 +7,17 @@ import { useFeed } from '../../hooks/useFeed';
 import PostCard from '../feed/PostCard';
 import PostCardSkeleton from '../ui/PostCardSkeleton';
 import StoriesRow from '../stories/StoriesRow';
+import { UserProfile } from '../../types';
 
 interface NewsfeedViewProps {
   onOpenCreate: () => void;
   onCommentClick?: (post: PostDto) => void;
   refreshKey?: number;
   onHashtagClick?: (tag: string) => void;
+  onUserClick?: (user: UserProfile) => void;
 }
 
-const NewsfeedView = ({ onOpenCreate, onCommentClick, refreshKey, onHashtagClick }: NewsfeedViewProps) => {
+const NewsfeedView = ({ onOpenCreate, onCommentClick, refreshKey, onHashtagClick, onUserClick }: NewsfeedViewProps) => {
   const { user } = useAuthStore();
   const { posts, loading, error, hasMore, loadMore, updatePostLike, refresh, removePost, updatePost } = useFeed();
 
@@ -116,6 +118,7 @@ const NewsfeedView = ({ onOpenCreate, onCommentClick, refreshKey, onHashtagClick
               onPostDeleted={(id) => { removePost(id); toast.success('Đã xóa bài viết.'); }}
               onPostUpdated={(id, updates) => updatePost(id, updates)}
               onHashtagClick={onHashtagClick}
+              onUserClick={onUserClick}
             />
           ))}
         </div>

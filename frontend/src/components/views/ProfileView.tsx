@@ -439,6 +439,7 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onU
               post={post}
               onCommentClick={onCommentClick}
               onHashtagClick={onHashtagClick}
+              onUserClick={onUserClick}
               onPostDeleted={(id) => setPosts(prev => prev.filter(p => Number(p.id) !== id))}
               onPostUpdated={(id, updates) => setPosts(prev => prev.map(p => Number(p.id) === id ? { ...p, ...updates } : p))}
             />

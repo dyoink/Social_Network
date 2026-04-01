@@ -184,7 +184,7 @@ export default function App() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {currentView === 'newsfeed' && <NewsfeedView onOpenCreate={() => setIsCreateOpen(true)} onCommentClick={setActiveCommentPost} refreshKey={feedRefreshKey} onHashtagClick={handleHashtagClick} />}
+                  {currentView === 'newsfeed' && <NewsfeedView onOpenCreate={() => setIsCreateOpen(true)} onCommentClick={setActiveCommentPost} refreshKey={feedRefreshKey} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
                   {currentView === 'profile' && <ProfileView user={selectedUser ?? undefined} onCommentClick={setActiveCommentPost} onMessageClick={handleMessageUser} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
                   {currentView === 'messenger' && <MessengerView targetUserId={messengerTargetUserId} />}
                   {currentView === 'search' && <SearchView onCommentClick={setActiveCommentPost} onUserClick={handleViewProfile} onHashtagClick={handleHashtagClick} />}
@@ -194,7 +194,7 @@ export default function App() {
                       onUserClick={handleViewProfile} 
                     />
                   )}
-                  {currentView === 'hashtag' && activeHashtag && <HashtagView tag={activeHashtag} onBack={() => setView('newsfeed')} onCommentClick={setActiveCommentPost} onHashtagClick={handleHashtagClick} />}
+                  {currentView === 'hashtag' && activeHashtag && <HashtagView tag={activeHashtag} onBack={() => setView('newsfeed')} onCommentClick={setActiveCommentPost} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
                   {currentView === 'settings' && <SettingsView onLogout={handleLogout} />}
                   {currentView === 'reels' && <ReelView />}
                 </motion.div>
@@ -210,6 +210,7 @@ export default function App() {
                   // Cập nhật commentsCount optimistic trên post đang xem
                   setActiveCommentPost(prev => prev ? { ...prev, commentsCount: (Number(prev.commentsCount ?? 0) + 1) } : prev);
                 }}
+                onUserClick={handleViewProfile}
               />
             ) : currentView !== 'profile' ? (
               <RightSidebar onUserClick={handleViewProfile} onHashtagClick={handleHashtagClick} />
