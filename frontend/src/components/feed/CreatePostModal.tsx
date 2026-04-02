@@ -57,6 +57,14 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, onNavigateSettings }:
   const [aiPreview, setAiPreview] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Tự động resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [content]);
+
   const handleClose = () => {
     setContent('');
     setImageUrl(undefined);
@@ -170,50 +178,52 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, onNavigateSettings }:
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="bg-surface-container-lowest w-full max-w-xl rounded-xl surface-elevation-tonal overflow-hidden"
+            className="bg-surface-container-lowest w-full max-w-xl rounded-[40px] surface-elevation-tonal overflow-hidden border border-outline-variant/10 shadow-2xl"
           >
             {/* Header */}
-            <div className="px-6 py-5 flex items-center justify-between border-b border-surface-container-low">
-              <h2 className="text-xl font-bold tracking-tight text-on-surface font-headline">Tạo bài viết</h2>
-              <button onClick={handleClose} className="p-2 hover:bg-surface-container-low rounded-full transition-colors">
-                <X className="w-5 h-5 text-outline" />
+            <div className="px-6 py-4 flex items-center justify-between border-b border-outline-variant/5 bg-surface-container-low/30 backdrop-blur-md">
+              <div className="w-8" /> {/* Placeholder for balance */}
+              <h2 className="text-lg font-black tracking-tight text-on-surface font-headline uppercase">Tạo bài viết mới</h2>
+              <button onClick={handleClose} className="p-2 hover:bg-surface-container rounded-full transition-all active:scale-90 group">
+                <X className="w-5 h-5 text-outline group-hover:text-on-surface" />
               </button>
             </div>
 
             {/* Body */}
-            <div className="p-6">
+            <div className="p-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
               {/* Author info */}
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-11 h-11 rounded-full overflow-hidden border border-primary/10">
+                <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-primary/10 flex-shrink-0">
                   <img alt="User" src={avatarUrl} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 </div>
-                <div>
-                  <span className="font-bold text-on-surface text-sm">{displayName}</span>
+                <div className="flex flex-col gap-1">
+                  <span className="font-black text-on-surface text-[15px] leading-none">{displayName}</span>
                   <div className="relative">
                     <button
                       onClick={() => setShowVisibility(v => !v)}
-                      className="flex items-center gap-1 bg-surface-container-low px-2 py-0.5 rounded-lg text-[11px] font-semibold text-secondary hover:bg-surface-container-high transition-colors"
+                      className="flex items-center gap-1.5 bg-surface-container-high/50 hover:bg-surface-container-high px-2.5 py-1 rounded-full text-[10px] font-black text-outline hover:text-primary transition-all uppercase tracking-wider border border-outline-variant/10"
                     >
                       {visibility === 'Public' && <><Globe className="w-3 h-3" /> Công khai</>}
-                      {visibility === 'FollowersOnly' && <><Users className="w-3 h-3" /> Người theo dõi</>}
+                      {visibility === 'FollowersOnly' && <><Users className="w-3 h-3" /> Bạn bè</>}
                       {visibility === 'Private' && <><Lock className="w-3 h-3" /> Riêng tư</>}
-                      <Plus className="w-3 h-3 rotate-45" />
+                      <Plus className="w-2.5 h-2.5 rotate-45 opacity-50" />
                     </button>
                     {showVisibility && (
-                      <div className="absolute top-full left-0 mt-1 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/20 py-1 z-20 min-w-[160px]">
+                      <div className="absolute top-full left-0 mt-2 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/20 py-2 z-20 min-w-[180px] overflow-hidden">
                         {([
-                          { val: 'Public' as const, icon: <Globe className="w-4 h-4" />, label: '🌍 Công khai' },
-                          { val: 'FollowersOnly' as const, icon: <Users className="w-4 h-4" />, label: '👥 Người theo dõi' },
-                          { val: 'Private' as const, icon: <Lock className="w-4 h-4" />, label: '🔒 Riêng tư' },
+                          { val: 'Public' as const, icon: <Globe className="w-4 h-4" />, label: 'Công khai', desc: 'Ai cũng có thể thấy' },
+                          { val: 'FollowersOnly' as const, icon: <Users className="w-4 h-4" />, label: 'Bạn bè', desc: 'Chỉ những người theo dõi' },
+                          { val: 'Private' as const, icon: <Lock className="w-4 h-4" />, label: 'Riêng tư', desc: 'Chỉ mình tôi' },
                         ]).map(opt => (
                           <button
                             key={opt.val}
                             onClick={() => { setVisibility(opt.val); setShowVisibility(false); }}
-                            className={`flex items-center gap-2 w-full px-4 py-2 text-sm transition-colors ${
-                              visibility === opt.val ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-surface-container-low'
+                            className={`flex flex-col w-full px-4 py-2.5 text-left transition-colors ${
+                              visibility === opt.val ? 'bg-primary text-white' : 'text-on-surface hover:bg-surface-container-low'
                             }`}
                           >
-                            {opt.label}
+                            <span className="text-xs font-bold flex items-center gap-2">{opt.icon} {opt.label}</span>
+                            <span className={`text-[9px] ${visibility === opt.val ? 'text-white/70' : 'text-outline'}`}>{opt.desc}</span>
                           </button>
                         ))}
                       </div>
@@ -222,15 +232,17 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, onNavigateSettings }:
                 </div>
               </div>
 
-              {/* Content textarea */}
-              <textarea
-                ref={textareaRef}
-                className="w-full border-none focus:ring-0 text-lg md:text-xl text-on-surface placeholder:text-outline/50 resize-none min-h-[140px] leading-relaxed p-0 bg-transparent"
-                placeholder="Bạn đang nghĩ gì?"
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                autoFocus
-              />
+              {/* Content textarea - now seamless without inner border */}
+              <div className="relative min-h-[160px] mt-2">
+                <textarea
+                  ref={textareaRef}
+                  className="w-full border-none focus:ring-0 text-xl md:text-2xl text-on-surface placeholder:text-outline/30 resize-none leading-relaxed p-0 pl-2 bg-transparent font-medium min-h-[120px]"
+                  placeholder="Hôm nay bạn cảm thấy thế nào?"
+                  value={content}
+                  onChange={e => setContent(e.target.value)}
+                  autoFocus
+                />
+              </div>
 
               {/* Image upload */}
               {showImageInput && (
@@ -570,69 +582,66 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, onNavigateSettings }:
               )}
 
               {/* Add to post bar */}
-              <div className="rounded-xl border border-outline-variant/30 p-4 mt-4 mb-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-secondary px-1">Thêm vào bài viết</span>
-                  <div className="flex items-center gap-1">
+              <div className="flex flex-col gap-4 mt-8">
+                <div className="flex items-center justify-between p-4 bg-surface-container-low/50 rounded-2xl border border-outline-variant/10">
+                  <span className="text-[13px] font-black text-on-surface-variant px-1 uppercase tracking-widest">Thêm vào bài viết</span>
+                  <div className="flex items-center gap-0.5">
                     <button
-                      className={`p-2.5 hover:bg-surface-container-low rounded-full transition-colors ${showImageInput ? 'text-primary' : 'text-primary/60'}`}
+                      className={`p-2.5 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 ${showImageInput ? 'text-primary bg-white shadow-sm' : 'text-primary/60'}`}
                       onClick={() => { setShowImageInput(!showImageInput); setShowVideoInput(false); }}
                       title="Ảnh"
                     >
-                      <Camera className="w-5 h-5" />
+                      <Camera className="w-5.5 h-5.5" />
                     </button>
                     <button
-                      className={`p-2.5 hover:bg-surface-container-low rounded-full transition-colors ${showVideoInput ? 'text-green-500' : 'text-green-500/60'}`}
+                      className={`p-2.5 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 ${showVideoInput ? 'text-green-500 bg-white shadow-sm' : 'text-green-500/60'}`}
                       onClick={() => { setShowVideoInput(!showVideoInput); setShowImageInput(false); }}
                       title="Video"
                     >
-                      <Video className="w-5 h-5" />
+                      <Video className="w-5.5 h-5.5" />
                     </button>
                     <button
-                      className={`p-2.5 hover:bg-surface-container-low rounded-full transition-colors ${showTagPeople ? 'text-tertiary' : 'text-tertiary/60'}`}
+                      className={`p-2.5 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 ${showTagPeople ? 'text-blue-500 bg-white shadow-sm' : 'text-blue-500/60'}`}
                       onClick={() => { setShowTagPeople(!showTagPeople); setShowEmoji(false); }}
                       title="Gắn thẻ bạn bè"
                     >
-                      <UserPlus className="w-5 h-5" />
+                      <UserPlus className="w-5.5 h-5.5" />
                     </button>
                     <button
-                      className={`p-2.5 hover:bg-surface-container-low rounded-full transition-colors ${showEmoji ? 'text-orange-500' : 'text-orange-500/60'}`}
+                      className={`p-2.5 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 ${showEmoji ? 'text-orange-500 bg-white shadow-sm' : 'text-orange-500/60'}`}
                       onClick={() => { setShowEmoji(!showEmoji); setShowTagPeople(false); }}
                       title="Biểu tượng cảm xúc"
                     >
-                      <Smile className="w-5 h-5" />
+                      <Smile className="w-5.5 h-5.5" />
                     </button>
                     <button
-                      className={`p-2.5 hover:bg-surface-container-low rounded-full transition-colors ${locationText ? 'text-red-500' : 'text-red-500/60'}`}
+                      className={`p-2.5 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 ${locationText ? 'text-red-500 bg-white shadow-sm' : 'text-red-500/60'}`}
                       onClick={detectLocation}
                       title="Vị trí"
                       disabled={locationLoading}
                     >
-                      {locationLoading ? <Loader className="w-5 h-5 animate-spin" /> : <MapPin className="w-5 h-5" />}
+                      {locationLoading ? <Loader className="w-5.5 h-5.5 animate-spin" /> : <MapPin className="w-5.5 h-5.5" />}
                     </button>
                     <button
-                      className={`p-2.5 hover:bg-surface-container-low rounded-full transition-colors ${showAi ? 'text-purple-500' : 'text-purple-500/60'}`}
+                      className={`p-2.5 hover:bg-white dark:hover:bg-white/10 rounded-xl transition-all active:scale-90 ${showAi ? 'text-purple-500 bg-white shadow-sm' : 'text-purple-500/60'}`}
                       onClick={() => { setShowAi(!showAi); setShowEmoji(false); setShowTagPeople(false); }}
                       title="Viết bằng AI"
                     >
-                      <Sparkles className="w-5 h-5" />
-                    </button>
-                    <button className="p-2.5 hover:bg-surface-container-low rounded-full transition-colors text-outline" title="Thêm">
-                      <MoreHorizontal className="w-5 h-5" />
+                      <Sparkles className="w-5.5 h-5.5" />
                     </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Submit */}
-              <button
-                className="w-full btn-primary py-3.5 flex items-center justify-center gap-2 disabled:opacity-60"
-                disabled={!content.trim() || loading}
-                onClick={handleSubmit}
-              >
-                {loading ? <Loader className="w-4 h-4 animate-spin" /> : null}
-                {loading ? 'Đang đăng...' : 'Đăng'}
-              </button>
+                {/* Submit */}
+                <button
+                  className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl flex items-center justify-center gap-3 disabled:opacity-50 transition-all font-black uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-[0.98]"
+                  disabled={!content.trim() || loading}
+                  onClick={handleSubmit}
+                >
+                  {loading ? <Loader className="w-5 h-5 animate-spin" /> : null}
+                  {loading ? 'Đang xuất bản...' : 'Đăng bài ngay'}
+                </button>
+              </div>
             </div>
           </motion.div>
         </div>
