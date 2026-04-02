@@ -17,10 +17,18 @@ const AdminPostsView = () => {
   const [actionId, setActionId] = useState<number | null>(null);
   const [detailPost, setDetailPost] = useState<AdminPostDto | null>(null);
   const pageSize = 20;
+  const [sortBy, setSortBy] = useState('createdat');
+  const [isDescending, setIsDescending] = useState(true);
 
-  const fetchPosts = (searchQ = q, p = page) => {
+  const fetchPosts = (searchQ = q, sort = sortBy, desc = isDescending, p = page) => {
     setLoading(true);
-    api.getApiAdminPosts({ q: searchQ || undefined, page: p, pageSize })
+    api.getApiAdminPosts({ 
+      q: searchQ || undefined, 
+      sortBy: sort,
+      isDescending: desc ? 'true' : 'false',
+      page: p, 
+      pageSize 
+    })
       .then(res => {
         if (res.success && res.data) {
           setPosts(res.data.items ?? []);
@@ -32,9 +40,24 @@ const AdminPostsView = () => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchPosts(); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchPosts(); }, [page, sortBy, isDescending]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSearch = () => { setPage(1); fetchPosts(q, 1); };
+  const handleSearch = () => { setPage(1); fetchPosts(q, sortBy, isDescending, 1); };
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setIsDescending(!isDescending);
+    } else {
+      setSortBy(field);
+      setIsDescending(true);
+    }
+    setPage(1);
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortBy !== field) return <span className="ml-1 opacity-20">↕</span>;
+    return <span className="ml-1">{isDescending ? '↓' : '↑'}</span>;
+  };
 
   const toggleSelect = (id: number) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -134,13 +157,43 @@ const AdminPostsView = () => {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="text-left px-2 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Tác giả</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Nội dung</th>
+                <th 
+                  className="text-left px-2 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('username')}
+                >
+                  Tác giả <SortIcon field="username" />
+                </th>
+                <th 
+                  className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('content')}
+                >
+                  Nội dung <SortIcon field="content" />
+                </th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Ảnh</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Like</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Bình luận</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Báo cáo</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Ngày đăng</th>
+                <th 
+                  className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('likescount')}
+                >
+                  Like <SortIcon field="likescount" />
+                </th>
+                <th 
+                  className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('commentscount')}
+                >
+                  Bình luận <SortIcon field="commentscount" />
+                </th>
+                <th 
+                  className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('reportcount')}
+                >
+                  Báo cáo <SortIcon field="reportcount" />
+                </th>
+                <th 
+                  className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('createdat')}
+                >
+                  Ngày đăng <SortIcon field="createdat" />
+                </th>
                 <th className="text-right px-6 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Hành động</th>
               </tr>
             </thead>

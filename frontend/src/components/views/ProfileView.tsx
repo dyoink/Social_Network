@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Camera, Settings, LayoutGrid, MapPin, Share2, UserPlus, UserMinus, MessageSquare, Loader, AlertCircle, X, Check, CalendarDays, Info, Zap } from 'lucide-react';
+import { Camera, Settings, LayoutGrid, MapPin, Share2, UserPlus, UserMinus, MessageSquare, Loader, AlertCircle, X, Check, CalendarDays, Info, Zap, Play } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
 import { getSocialNetworkApiV1, type PostDto, type BadgeProgressDto, type UserBadgeDto } from '../../api/api-generated';
 import { uploadImage } from '../../api/axios';
@@ -123,7 +124,7 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onU
   const [editSaving, setEditSaving] = useState(false);
 
   // Tab state
-  type ProfileTab = 'posts' | 'photos' | 'about' | 'badges';
+  type ProfileTab = 'posts' | 'multimedia' | 'about' | 'badges';
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -132,6 +133,9 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onU
   const [badgeProgress, setBadgeProgress] = useState<BadgeProgressDto[]>([]);
   const [badgesLoading, setBadgesLoading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Lightbox state
+  const [selectedMedia, setSelectedMedia] = useState<PostDto | null>(null);
 
   const openEditModal = () => {
     setEditFullName(user?.name ?? '');
@@ -380,7 +384,7 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onU
         {/* Tabs */}
         <div className="px-8 border-t border-outline-variant/10">
           <div className="flex items-center gap-8">
-            {([{ key: 'posts', label: 'Bài viết' }, { key: 'photos', label: 'Ảnh' }, { key: 'about', label: 'Giới thiệu' }, { key: 'badges', label: 'Danh hiệu' }] as const).map(tab => (
+            {([{ key: 'posts', label: 'Bài viết' }, { key: 'multimedia', label: 'Đa phương tiện' }, { key: 'about', label: 'Giới thiệu' }, { key: 'badges', label: 'Danh hiệu' }] as const).map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
@@ -434,15 +438,16 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onU
           )}
 
           {posts.map(post => (
-            <PostCard
-              key={Number(post.id)}
-              post={post}
-              onCommentClick={onCommentClick}
-              onHashtagClick={onHashtagClick}
-              onUserClick={onUserClick}
-              onPostDeleted={(id) => setPosts(prev => prev.filter(p => Number(p.id) !== id))}
-              onPostUpdated={(id, updates) => setPosts(prev => prev.map(p => Number(p.id) === id ? { ...p, ...updates } : p))}
-            />
+            <div key={Number(post.id)} id={`post-${post.id}`}>
+              <PostCard
+                post={post}
+                onCommentClick={onCommentClick}
+                onHashtagClick={onHashtagClick}
+                onUserClick={onUserClick}
+                onPostDeleted={(id) => setPosts(prev => prev.filter(p => Number(p.id) !== id))}
+                onPostUpdated={(id, updates) => setPosts(prev => prev.map(p => Number(p.id) === id ? { ...p, ...updates } : p))}
+              />
+            </div>
           ))}
 
           {hasMore && posts.length > 0 && (
@@ -459,20 +464,31 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onU
       </div>
       )}
 
-      {/* Tab: Ảnh */}
-      {activeTab === 'photos' && (
+      {/* Tab: Đa phương tiện (Ảnh & Video) */}
+      {activeTab === 'multimedia' && (
         <div className="bg-surface-container-lowest rounded-2xl p-6 surface-elevation-tonal">
-          <h3 className="font-headline font-bold text-lg text-on-surface mb-4">Ảnh</h3>
+          <h3 className="font-headline font-bold text-lg text-on-surface mb-4">Đa phương tiện</h3>
           {(() => {
-            const photoPosts = posts.filter(p => p.imageUrl);
+            const mediaPosts = posts.filter(p => p.imageUrl || p.videoUrl);
             if (postsLoading && posts.length === 0) return <div className="flex justify-center py-16"><Loader className="w-8 h-8 animate-spin text-primary" /></div>;
-            if (photoPosts.length === 0) return <p className="text-outline text-center py-12">Chưa có ảnh nào</p>;
+            if (mediaPosts.length === 0) return <p className="text-outline text-center py-12">Chưa có ảnh hoặc video nào</p>;
             return (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {photoPosts.map(post => (
-                  <div key={Number(post.id)} className="aspect-square rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => { setActiveTab('posts'); onCommentClick?.(post); }}>
-                    <img src={post.imageUrl!} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                {mediaPosts.map(post => (
+                  <div key={Number(post.id)} className="aspect-square rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity relative group"
+                    onClick={() => setSelectedMedia(post)}>
+                    {post.videoUrl ? (
+                      <>
+                        <video src={post.videoUrl} className="w-full h-full object-cover" preload="metadata" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                          <div className="bg-white/30 backdrop-blur-md p-2 rounded-full">
+                            <Play className="w-6 h-6 text-white fill-white" />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <img src={post.imageUrl!} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    )}
                   </div>
                 ))}
               </div>
@@ -726,16 +742,89 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onU
         />
       )}
 
-      {/* Users Modal (Followers/Following) */}
-      {userId && (
-        <UsersModal
-          userId={userId}
-          type={usersModalType}
-          isOpen={showUsersModal}
-          onClose={() => setShowUsersModal(false)}
-          onUserClick={onUserClick}
-        />
-      )}
+      {/* Media Lightbox */}
+      <AnimatePresence>
+        {selectedMedia && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 md:p-10"
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setSelectedMedia(null)}
+              className="absolute top-4 right-4 md:top-8 md:right-8 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-50"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Media container */}
+            <div className="relative w-full h-full flex flex-col items-center justify-center">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="max-w-full max-h-[80vh] flex items-center justify-center"
+              >
+                {selectedMedia.videoUrl ? (
+                  <video
+                    src={selectedMedia.videoUrl}
+                    controls
+                    autoPlay
+                    className="max-w-full max-h-[80vh] rounded-lg shadow-2xl"
+                  />
+                ) : (
+                  <img
+                    src={selectedMedia.imageUrl!}
+                    alt="Full size"
+                    className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+                    referrerPolicy="no-referrer"
+                  />
+                )}
+              </motion.div>
+
+              {/* Bottom info */}
+              <div className="w-full max-w-4xl mt-6 text-white space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20">
+                    <img
+                      src={selectedMedia.user?.avatarUrl || `https://picsum.photos/seed/${selectedMedia.user?.username}/100/100`}
+                      className="w-full h-full object-cover"
+                      alt=""
+                    />
+                  </div>
+                  <div>
+                    <div className="font-bold">{selectedMedia.user?.fullName || selectedMedia.user?.username}</div>
+                    <div className="text-xs text-white/60">{new Date(selectedMedia.createdAt!).toLocaleString('vi-VN')}</div>
+                  </div>
+                </div>
+                <p className="text-sm line-clamp-2 md:line-clamp-none opacity-90">{selectedMedia.content}</p>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => {
+                      const m = selectedMedia;
+                      setSelectedMedia(null);
+                      setActiveTab('posts');
+                      // Chờ tab transition xong rồi scroll và mở comment
+                      setTimeout(() => {
+                        const element = document.getElementById(`post-${m.id}`);
+                        if (element) {
+                          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                        onCommentClick?.(m);
+                      }, 300);
+                    }}
+                    className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-full text-sm font-bold hover:brightness-110 transition-all active:scale-95"
+                  >
+                    <MessageSquare className="w-4 h-4" /> Xem bài viết & Bình luận
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

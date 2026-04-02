@@ -46,10 +46,12 @@ public class AdminController(IAdminService adminService, IBadgeService badgeServ
         [FromQuery] string? q,
         [FromQuery] string? role,
         [FromQuery] string? status,
+        [FromQuery] string? sortBy,
+        [FromQuery] string? isDescending = "true",
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var result = await adminService.GetUsersAsync(q, role, status, page, pageSize);
+        var result = await adminService.GetUsersAsync(q, role, status, sortBy, isDescending, page, pageSize);
         return Ok(ApiResponse<PagedResult<AdminUserDto>>.Ok(result));
     }
 
@@ -134,10 +136,12 @@ public class AdminController(IAdminService adminService, IBadgeService badgeServ
     [ProducesResponseType<ApiResponse<PagedResult<AdminPostDto>>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPosts(
         [FromQuery] string? q,
+        [FromQuery] string? sortBy,
+        [FromQuery] string? isDescending = "true",
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var result = await adminService.GetPostsAsync(q, page, pageSize);
+        var result = await adminService.GetPostsAsync(q, sortBy, isDescending, page, pageSize);
         return Ok(ApiResponse<PagedResult<AdminPostDto>>.Ok(result));
     }
 

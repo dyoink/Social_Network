@@ -85,7 +85,7 @@ public class AdminService(SocialDbContext db) : IAdminService
         };
     }
 
-    public async Task<PagedResult<AdminUserDto>> GetUsersAsync(string? q, string? role, string? status, int page, int pageSize)
+    public async Task<PagedResult<AdminUserDto>> GetUsersAsync(string? q, string? role, string? status, string? sortBy, string? isDescending, int page, int pageSize)
     {
         var query = db.Users.AsQueryable();
 
@@ -101,10 +101,30 @@ public class AdminService(SocialDbContext db) : IAdminService
             else if (status == "banned") query = query.Where(u => !u.IsActive);
         }
 
+        bool desc = true;
+        if (!string.IsNullOrWhiteSpace(isDescending))
+        {
+            bool.TryParse(isDescending, out desc);
+        }
+
+        // Sorting
+        query = sortBy?.ToLower() switch
+        {
+            "username"  => desc ? query.OrderByDescending(u => u.Username) : query.OrderBy(u => u.Username),
+            "email"     => desc ? query.OrderByDescending(u => u.Email) : query.OrderBy(u => u.Email),
+            "postcount" => desc ? query.OrderByDescending(u => u.Posts.Count) : query.OrderBy(u => u.Posts.Count),
+            "followercount" => desc ? query.OrderByDescending(u => u.Followers.Count) : query.OrderBy(u => u.Followers.Count),
+            "followingcount" => desc ? query.OrderByDescending(u => u.Following.Count) : query.OrderBy(u => u.Following.Count),
+            "commentcount" => desc ? query.OrderByDescending(u => u.Comments.Count) : query.OrderBy(u => u.Comments.Count),
+            "reportcount" => desc 
+                ? query.OrderByDescending(u => db.Reports.Count(r => r.TargetUserId == u.Id)) 
+                : query.OrderBy(u => db.Reports.Count(r => r.TargetUserId == u.Id)),
+            _ => desc ? query.OrderByDescending(u => u.CreatedAt) : query.OrderBy(u => u.CreatedAt)
+        };
+
         var total = await query.CountAsync();
 
         var items = await query
-            .OrderByDescending(u => u.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(u => new AdminUserDto
@@ -120,6 +140,7 @@ public class AdminService(SocialDbContext db) : IAdminService
                 FollowerCount  = u.Followers.Count,
                 FollowingCount = u.Following.Count,
                 CommentCount   = u.Comments.Count,
+                ReportCount    = db.Reports.Count(r => r.TargetUserId == u.Id),
                 CreatedAt      = u.CreatedAt,
             })
             .ToListAsync();
@@ -175,17 +196,35 @@ public class AdminService(SocialDbContext db) : IAdminService
         await db.SaveChangesAsync();
     }
 
-    public async Task<PagedResult<AdminPostDto>> GetPostsAsync(string? q, int page, int pageSize)
+    public async Task<PagedResult<AdminPostDto>> GetPostsAsync(string? q, string? sortBy, string? isDescending, int page, int pageSize)
     {
         var query = db.Posts.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(p => p.Content.Contains(q) || (p.User != null && p.User.Username.Contains(q)));
 
+        bool desc = true;
+        if (!string.IsNullOrWhiteSpace(isDescending))
+        {
+            bool.TryParse(isDescending, out desc);
+        }
+
+        // Sorting
+        query = sortBy?.ToLower() switch
+        {
+            "content"  => desc ? query.OrderByDescending(p => p.Content) : query.OrderBy(p => p.Content),
+            "username" => desc ? query.OrderByDescending(p => p.User.Username) : query.OrderBy(p => p.User.Username),
+            "likescount" => desc ? query.OrderByDescending(p => p.Likes.Count) : query.OrderBy(p => p.Likes.Count),
+            "commentscount" => desc ? query.OrderByDescending(p => p.Comments.Count) : query.OrderBy(p => p.Comments.Count),
+            "reportcount" => desc 
+                ? query.OrderByDescending(p => db.Reports.Count(r => r.TargetPostId == p.Id)) 
+                : query.OrderBy(p => db.Reports.Count(r => r.TargetPostId == p.Id)),
+            _ => desc ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt)
+        };
+
         var total = await query.CountAsync();
 
         var items = await query
-            .OrderByDescending(p => p.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(p => new AdminPostDto

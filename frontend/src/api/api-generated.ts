@@ -92,6 +92,8 @@ export interface AdminUserDto {
   followingCount?: number | string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   commentCount?: number | string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  reportCount?: number | string;
   createdAt?: string;
 }
 
@@ -910,6 +912,8 @@ export type GetApiAdminUsersParams = {
 q?: string;
 role?: string;
 status?: string;
+sortBy?: string;
+isDescending?: string;
 /**
  * @pattern ^-?(?:0|[1-9]\d*)$
  */
@@ -926,6 +930,8 @@ ban?: boolean;
 
 export type GetApiAdminPostsParams = {
 q?: string;
+sortBy?: string;
+isDescending?: string;
 /**
  * @pattern ^-?(?:0|[1-9]\d*)$
  */

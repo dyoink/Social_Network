@@ -12,6 +12,8 @@ const AdminUsersView = () => {
   const [q, setQ] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [sortBy, setSortBy] = useState('createdat');
+  const [isDescending, setIsDescending] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -22,9 +24,17 @@ const AdminUsersView = () => {
   const [newPassword, setNewPassword] = useState('');
   const pageSize = 20;
 
-  const fetchUsers = (searchQ = q, role = roleFilter, status = statusFilter, p = page) => {
+  const fetchUsers = (searchQ = q, role = roleFilter, status = statusFilter, sort = sortBy, desc = isDescending, p = page) => {
     setLoading(true);
-    api.getApiAdminUsers({ q: searchQ || undefined, role: role || undefined, status: status || undefined, page: p, pageSize })
+    api.getApiAdminUsers({ 
+      q: searchQ || undefined, 
+      role: role || undefined, 
+      status: status || undefined, 
+      sortBy: sort,
+      isDescending: desc ? 'true' : 'false',
+      page: p, 
+      pageSize 
+    })
       .then(res => {
         if (res.success && res.data) {
           setUsers(res.data.items ?? []);
@@ -36,9 +46,24 @@ const AdminUsersView = () => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchUsers(); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchUsers(); }, [page, sortBy, isDescending]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSearch = () => { setPage(1); fetchUsers(q, roleFilter, statusFilter, 1); };
+  const handleSearch = () => { setPage(1); fetchUsers(q, roleFilter, statusFilter, sortBy, isDescending, 1); };
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setIsDescending(!isDescending);
+    } else {
+      setSortBy(field);
+      setIsDescending(true);
+    }
+    setPage(1);
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortBy !== field) return <span className="ml-1 opacity-20">↕</span>;
+    return <span className="ml-1">{isDescending ? '↓' : '↑'}</span>;
+  };
 
   const toggleSelect = (id: number) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -219,13 +244,50 @@ const AdminUsersView = () => {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="text-left px-2 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Người dùng</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Email</th>
+                <th 
+                  className="text-left px-2 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('username')}
+                >
+                  Người dùng <SortIcon field="username" />
+                </th>
+                <th 
+                  className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('email')}
+                >
+                  Email <SortIcon field="email" />
+                </th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Role</th>
                 <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Trạng thái</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Bài viết</th>
-                <th className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Followers</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Ngày tạo</th>
+                <th 
+                  className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('postcount')}
+                >
+                  Bài viết <SortIcon field="postcount" />
+                </th>
+                <th 
+                  className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('followercount')}
+                >
+                  Followers <SortIcon field="followercount" />
+                </th>
+                <th 
+                  className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('commentcount')}
+                >
+                  Bình luận <SortIcon field="commentcount" />
+                </th>
+                <th 
+                  className="text-center px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('reportcount')}
+                >
+                  Báo cáo <SortIcon field="reportcount" />
+                </th>
+                <th 
+                  className="text-left px-4 py-3 text-xs font-semibold text-outline uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => handleSort('createdat')}
+                >
+                  Ngày tạo <SortIcon field="createdat" />
+                </th>
                 <th className="text-right px-6 py-3 text-xs font-semibold text-outline uppercase tracking-wider">Hành động</th>
               </tr>
             </thead>
@@ -233,7 +295,7 @@ const AdminUsersView = () => {
               {users.map(user => (
                 <tr 
                   key={user.id} 
-                  className={`hover:bg-surface-container-low/50 transition-colors cursor-pointer ${selectedIds.includes(user.id!) ? 'bg-primary/5' : ''}`}
+                  className={`hover:bg-surface-container-low/50 transition-colors cursor-pointer ${selectedIds.includes(user.id!) ? 'bg-primary/5' : ''} ${Number(user.reportCount ?? 0) > 0 ? 'bg-red-50/30 dark:bg-red-500/5' : ''}`}
                   onClick={() => toggleSelect(user.id!)}
                 >
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
@@ -262,6 +324,12 @@ const AdminUsersView = () => {
                   </td>
                   <td className="px-4 py-4 text-center text-on-surface-variant">{user.postCount ?? 0}</td>
                   <td className="px-4 py-4 text-center text-on-surface-variant">{user.followerCount ?? 0}</td>
+                  <td className="px-4 py-4 text-center text-on-surface-variant">{user.commentCount ?? 0}</td>
+                  <td className="px-4 py-4 text-center">
+                    {Number(user.reportCount ?? 0) > 0 ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">{user.reportCount}</span>
+                    ) : <span className="text-outline">—</span>}
+                  </td>
                   <td className="px-4 py-4 text-outline text-xs whitespace-nowrap">{timeAgo(user.createdAt?.toString())}</td>
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
@@ -321,6 +389,7 @@ const AdminUsersView = () => {
                 <div><span className="text-outline">Followers:</span><p className="font-medium text-on-surface-variant">{detailUser.followerCount ?? 0}</p></div>
                 <div><span className="text-outline">Following:</span><p className="font-medium text-on-surface-variant">{detailUser.followingCount ?? 0}</p></div>
                 <div><span className="text-outline">Bình luận:</span><p className="font-medium text-on-surface-variant">{detailUser.commentCount ?? 0}</p></div>
+                <div><span className="text-outline">Báo cáo:</span><p className="font-medium text-red-600">{detailUser.reportCount ?? 0}</p></div>
               </div>
             </div>
           </div>

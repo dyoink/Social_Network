@@ -48,6 +48,7 @@ namespace SocialNetwork.Api.DTOs.Admin
         public int FollowerCount { get; set; }
         public int FollowingCount { get; set; }
         public int CommentCount { get; set; }
+        public int ReportCount { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
