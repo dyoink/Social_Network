@@ -82,6 +82,7 @@ export default function App() {
   const [currentView, setView] = useState<View>('newsfeed');
   const [adminTab, setAdminTab] = useState<AdminTab>('dashboard');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createPostAction, setCreatePostAction] = useState<'image' | 'video' | 'location' | 'emoji' | undefined>(undefined);
   const [activeCommentPost, setActiveCommentPost] = useState<PostDto | null>(null);
   // Tăng key để NewsfeedView tự refresh sau khi đăng bài mới
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
@@ -188,7 +189,7 @@ export default function App() {
             <Sidebar 
               currentView={currentView} 
               setView={setView} 
-              onOpenCreate={() => setIsCreateOpen(true)} 
+              onOpenCreate={() => { setCreatePostAction(undefined); setIsCreateOpen(true); }} 
               onProfileClick={() => currentUserProfile && handleViewProfile(currentUserProfile)} 
               user={currentUserProfile}
             />
@@ -203,7 +204,16 @@ export default function App() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {currentView === 'newsfeed' && <NewsfeedView onOpenCreate={() => setIsCreateOpen(true)} onCommentClick={setActiveCommentPost} onImageClick={setSelectedPostDetail} refreshKey={feedRefreshKey} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
+                  {currentView === 'newsfeed' && (
+                    <NewsfeedView 
+                      onOpenCreate={(action) => { setCreatePostAction(action); setIsCreateOpen(true); }} 
+                      onCommentClick={setActiveCommentPost} 
+                      onImageClick={setSelectedPostDetail} 
+                      refreshKey={feedRefreshKey} 
+                      onHashtagClick={handleHashtagClick} 
+                      onUserClick={handleViewProfile} 
+                    />
+                  )}
                   {currentView === 'profile' && <ProfileView user={selectedUser ?? undefined} onCommentClick={setActiveCommentPost} onImageClick={setSelectedPostDetail} onMessageClick={handleMessageUser} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
                   {currentView === 'messenger' && <MessengerView targetUserId={messengerTargetUserId} />}
                   {currentView === 'search' && <SearchView onCommentClick={setActiveCommentPost} onImageClick={setSelectedPostDetail} onUserClick={handleViewProfile} onHashtagClick={handleHashtagClick} />}
@@ -238,16 +248,17 @@ export default function App() {
 
           <CreatePostModal
             isOpen={isCreateOpen}
-            onClose={() => setIsCreateOpen(false)}
+            onClose={() => { setIsCreateOpen(false); setCreatePostAction(undefined); }}
             onPostCreated={() => setFeedRefreshKey(k => k + 1)}
-            onNavigateSettings={() => { setIsCreateOpen(false); setView('settings'); }}
+            onNavigateSettings={() => { setIsCreateOpen(false); setView('settings'); setCreatePostAction(undefined); }}
+            initialAction={createPostAction}
           />
 
           {/* Mobile Bottom Nav */}
           <nav className="md:hidden fixed bottom-0 w-full bg-surface-container-lowest/90 backdrop-blur-xl border-t border-outline-variant/20 flex justify-around items-center h-16 px-4 z-50">
             <button onClick={() => setView('newsfeed')} className={`p-2 ${currentView === 'newsfeed' ? 'text-primary' : 'text-outline'}`}><Rss className="w-6 h-6" /></button>
             <button onClick={() => setView('search')} className={`p-2 ${currentView === 'search' ? 'text-primary' : 'text-outline'}`}><Search className="w-6 h-6" /></button>
-            <button onClick={() => setIsCreateOpen(true)} className="bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg -mt-8 ring-4 ring-surface-container-lowest">
+            <button onClick={() => { setCreatePostAction(undefined); setIsCreateOpen(true); }} className="bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg -mt-8 ring-4 ring-surface-container-lowest">
               <Plus className="w-6 h-6" />
             </button>
             <button onClick={() => setView('notifications')} className={`p-2 ${currentView === 'notifications' ? 'text-primary' : 'text-outline'}`}><Bell className="w-6 h-6" /></button>

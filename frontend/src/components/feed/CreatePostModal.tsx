@@ -21,9 +21,10 @@ interface CreatePostModalProps {
   onPostCreated?: (post: PostDto) => void;
   /** Điều hướng sang trang Cài đặt (để nhập API Key) */
   onNavigateSettings?: () => void;
+  initialAction?: 'image' | 'video' | 'location' | 'emoji';
 }
 
-const CreatePostModal = ({ isOpen, onClose, onPostCreated, onNavigateSettings }: CreatePostModalProps) => {
+const CreatePostModal = ({ isOpen, onClose, onPostCreated, onNavigateSettings, initialAction }: CreatePostModalProps) => {
   const api = getSocialNetworkApiV1();
   const { user } = useAuthStore();
 
@@ -56,6 +57,15 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, onNavigateSettings }:
   const [aiShowAdvanced, setAiShowAdvanced] = useState(false);
   const [aiPreview, setAiPreview] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (isOpen && initialAction) {
+      if (initialAction === 'image') { setShowImageInput(true); setShowVideoInput(false); }
+      else if (initialAction === 'video') { setShowVideoInput(true); setShowImageInput(false); }
+      else if (initialAction === 'emoji') { setShowEmoji(true); setShowTagPeople(false); }
+      else if (initialAction === 'location') detectLocation();
+    }
+  }, [isOpen, initialAction]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tự động resize textarea
   useEffect(() => {
@@ -142,13 +152,14 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, onNavigateSettings }:
   };
 
   const handleSubmit = async () => {
-    if (!content.trim()) return;
+    const isMediaPresent = imageUrl || videoUrl || locationText;
+    if (!content.trim() && !isMediaPresent) return;
     setLoading(true);
     setError(null);
 
     try {
       const res = await api.postApiPosts({
-        content: content.trim(),
+        content: content.trim() || (videoUrl ? '🎬' : imageUrl ? '🖼️' : locationText ? '📍' : ''),
         imageUrl: imageUrl?.trim() || undefined,
         videoUrl: videoUrl?.trim() || undefined,
         visibility,
@@ -635,7 +646,7 @@ const CreatePostModal = ({ isOpen, onClose, onPostCreated, onNavigateSettings }:
                 {/* Submit */}
                 <button
                   className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-2xl flex items-center justify-center gap-3 disabled:opacity-50 transition-all font-black uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-[0.98]"
-                  disabled={!content.trim() || loading}
+                  disabled={(!content.trim() && !imageUrl && !videoUrl && !locationText) || loading || videoUploading}
                   onClick={handleSubmit}
                 >
                   {loading ? <Loader className="w-5 h-5 animate-spin" /> : null}
