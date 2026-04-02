@@ -84,6 +84,7 @@ const InlineMobileComment = ({ postId, currentUser, onCommentAdded }: { postId: 
 interface PostCardProps {
   post: PostDto;
   onCommentClick?: (post: PostDto) => void;
+  onImageClick?: (post: PostDto) => void;
   onLikeToggle?: (postId: number, isLiked: boolean, likesCount: number) => void;
   onPostDeleted?: (postId: number) => void;
   onPostUpdated?: (postId: number, updates: Partial<PostDto>) => void;
@@ -135,7 +136,7 @@ function renderContentWithHashtags(content: string, onHashtagClick?: (tag: strin
   });
 }
 
-const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPostDeleted, onPostUpdated, onHashtagClick, onUserClick }) => {
+const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onImageClick, onLikeToggle, onPostDeleted, onPostUpdated, onHashtagClick, onUserClick }) => {
   const api = getSocialNetworkApiV1();
   const { user: currentUser } = useAuthStore();
 
@@ -391,10 +392,10 @@ const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPos
 
       {post.imageUrl && (
         <div className="px-2">
-          <div className="rounded-lg overflow-hidden bg-surface-container-low/30">
+          <div className="rounded-lg overflow-hidden bg-surface-container-low/30 cursor-pointer" onClick={() => onImageClick?.(post)}>
             <img 
               alt="Post content" 
-              className="w-full max-h-[700px] object-contain mx-auto" 
+              className="w-full max-h-[700px] object-contain mx-auto transition-transform hover:scale-[1.01]" 
               src={post.imageUrl} 
               referrerPolicy="no-referrer" 
             />
@@ -404,11 +405,11 @@ const PostCard: FC<PostCardProps> = ({ post, onCommentClick, onLikeToggle, onPos
 
       {post.videoUrl && (
         <div className="px-2">
-          <div className="rounded-lg overflow-hidden bg-black">
+          <div className="rounded-lg overflow-hidden bg-black cursor-pointer" onClick={() => onImageClick?.(post)}>
             <video
               src={post.videoUrl}
-              className="w-full max-h-[700px] object-contain mx-auto"
-              controls
+              className="w-full max-h-[700px] object-contain mx-auto transition-transform hover:scale-[1.01]"
+              controls={false}
               playsInline
               preload="metadata"
             />

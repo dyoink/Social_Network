@@ -16,6 +16,7 @@ import UsersModal from '../ui/UsersModal';
 interface ProfileViewProps {
   user?: UserProfile;
   onCommentClick?: (post: PostDto) => void;
+  onImageClick?: (post: PostDto) => void;
   /** Chuyển sang Messenger và mở conversation với user này */
   onMessageClick?: (userId: number) => void;
   onHashtagClick?: (tag: string) => void;
@@ -44,7 +45,7 @@ const IntroItem = ({ icon, text, isLink }: { icon: ReactNode; text: string; isLi
   </div>
 );
 
-const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onUserClick }: ProfileViewProps) => {
+const ProfileView = ({ user, onCommentClick, onImageClick, onMessageClick, onHashtagClick, onUserClick }: ProfileViewProps) => {
   const api = useMemo(() => getSocialNetworkApiV1(), []);
   const { user: currentUser, updateUser } = useAuthStore();
 
@@ -133,9 +134,6 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onU
   const [badgeProgress, setBadgeProgress] = useState<BadgeProgressDto[]>([]);
   const [badgesLoading, setBadgesLoading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-
-  // Lightbox state
-  const [selectedMedia, setSelectedMedia] = useState<PostDto | null>(null);
 
   const openEditModal = () => {
     setEditFullName(user?.name ?? '');
@@ -442,6 +440,7 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onU
               <PostCard
                 post={post}
                 onCommentClick={onCommentClick}
+                onImageClick={onImageClick}
                 onHashtagClick={onHashtagClick}
                 onUserClick={onUserClick}
                 onPostDeleted={(id) => setPosts(prev => prev.filter(p => Number(p.id) !== id))}
@@ -476,7 +475,7 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onU
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {mediaPosts.map(post => (
                   <div key={Number(post.id)} className="aspect-square rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity relative group"
-                    onClick={() => setSelectedMedia(post)}>
+                    onClick={() => onImageClick?.(post)}>
                     {post.videoUrl ? (
                       <>
                         <video src={post.videoUrl} className="w-full h-full object-cover" preload="metadata" />
@@ -741,90 +740,6 @@ const ProfileView = ({ user, onCommentClick, onMessageClick, onHashtagClick, onU
           onClose={() => setShowPokeModal(false)}
         />
       )}
-
-      {/* Media Lightbox */}
-      <AnimatePresence>
-        {selectedMedia && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 md:p-10"
-          >
-            {/* Close button */}
-            <button
-              onClick={() => setSelectedMedia(null)}
-              className="absolute top-4 right-4 md:top-8 md:right-8 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-50"
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            {/* Media container */}
-            <div className="relative w-full h-full flex flex-col items-center justify-center">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="max-w-full max-h-[80vh] flex items-center justify-center"
-              >
-                {selectedMedia.videoUrl ? (
-                  <video
-                    src={selectedMedia.videoUrl}
-                    controls
-                    autoPlay
-                    className="max-w-full max-h-[80vh] rounded-lg shadow-2xl"
-                  />
-                ) : (
-                  <img
-                    src={selectedMedia.imageUrl!}
-                    alt="Full size"
-                    className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
-                    referrerPolicy="no-referrer"
-                  />
-                )}
-              </motion.div>
-
-              {/* Bottom info */}
-              <div className="w-full max-w-4xl mt-6 text-white space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20">
-                    <img
-                      src={selectedMedia.user?.avatarUrl || `https://picsum.photos/seed/${selectedMedia.user?.username}/100/100`}
-                      className="w-full h-full object-cover"
-                      alt=""
-                    />
-                  </div>
-                  <div>
-                    <div className="font-bold">{selectedMedia.user?.fullName || selectedMedia.user?.username}</div>
-                    <div className="text-xs text-white/60">{new Date(selectedMedia.createdAt!).toLocaleString('vi-VN')}</div>
-                  </div>
-                </div>
-                <p className="text-sm line-clamp-2 md:line-clamp-none opacity-90">{selectedMedia.content}</p>
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => {
-                      const m = selectedMedia;
-                      setSelectedMedia(null);
-                      setActiveTab('posts');
-                      // Chờ tab transition xong rồi scroll và mở comment
-                      setTimeout(() => {
-                        const element = document.getElementById(`post-${m.id}`);
-                        if (element) {
-                          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                        onCommentClick?.(m);
-                      }, 300);
-                    }}
-                    className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-full text-sm font-bold hover:brightness-110 transition-all active:scale-95"
-                  >
-                    <MessageSquare className="w-4 h-4" /> Xem bài viết & Bình luận
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

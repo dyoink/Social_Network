@@ -13,12 +13,13 @@ import { UserProfile } from '../../types';
 interface NewsfeedViewProps {
   onOpenCreate: () => void;
   onCommentClick?: (post: PostDto) => void;
+  onImageClick?: (post: PostDto) => void;
   refreshKey?: number;
   onHashtagClick?: (tag: string) => void;
   onUserClick?: (user: UserProfile) => void;
 }
 
-const NewsfeedView = ({ onOpenCreate, onCommentClick, refreshKey, onHashtagClick, onUserClick }: NewsfeedViewProps) => {
+const NewsfeedView = ({ onOpenCreate, onCommentClick, onImageClick, refreshKey, onHashtagClick, onUserClick }: NewsfeedViewProps) => {
   const { user } = useAuthStore();
   const { posts, loading, error, hasMore, loadMore, updatePostLike, refresh, removePost, updatePost } = useFeed();
 
@@ -118,6 +119,7 @@ const NewsfeedView = ({ onOpenCreate, onCommentClick, refreshKey, onHashtagClick
               key={Number(post.id)}
               post={post}
               onCommentClick={onCommentClick}
+              onImageClick={onImageClick}
               onLikeToggle={(id, liked, count) => updatePostLike(id, liked, count)}
               onPostDeleted={(id) => { removePost(id); toast.success('Đã xóa bài viết.'); }}
               onPostUpdated={(id, updates) => updatePost(id, updates)}

@@ -10,11 +10,12 @@ interface HashtagViewProps {
   tag: string;
   onBack: () => void;
   onCommentClick: (post: PostDto) => void;
+  onImageClick?: (post: PostDto) => void;
   onHashtagClick?: (tag: string) => void;
   onUserClick?: (user: UserProfile) => void;
 }
 
-const HashtagView = ({ tag, onBack, onCommentClick, onHashtagClick, onUserClick }: HashtagViewProps) => {
+const HashtagView = ({ tag, onBack, onCommentClick, onImageClick, onHashtagClick, onUserClick }: HashtagViewProps) => {
   const api = getSocialNetworkApiV1();
   const [posts, setPosts] = useState<PostDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,6 +148,7 @@ const HashtagView = ({ tag, onBack, onCommentClick, onHashtagClick, onUserClick 
               key={Number(post.id)}
               post={post}
               onCommentClick={onCommentClick}
+              onImageClick={onImageClick}
               onHashtagClick={onHashtagClick}
               onUserClick={onUserClick}
               onPostDeleted={(id) => setPosts(prev => prev.filter(p => Number(p.id) !== id))}

@@ -83,11 +83,12 @@ type Tab = 'all' | 'people' | 'posts' | 'images' | 'videos' | 'groups';
 
 interface SearchViewProps {
   onCommentClick: (post: PostDto) => void;
+  onImageClick?: (post: PostDto) => void;
   onUserClick: (u: UserProfile) => void;
   onHashtagClick?: (tag: string) => void;
 }
 
-const SearchView = ({ onCommentClick, onUserClick, onHashtagClick }: SearchViewProps) => {
+const SearchView = ({ onCommentClick, onImageClick, onUserClick, onHashtagClick }: SearchViewProps) => {
   const api = getSocialNetworkApiV1();
   const [query,      setQuery]      = useState('');
   const [activeTab,  setActiveTab]  = useState<Tab>('all');
@@ -363,6 +364,7 @@ const SearchView = ({ onCommentClick, onUserClick, onHashtagClick }: SearchViewP
                     key={Number(p.id)}
                     post={p}
                     onCommentClick={onCommentClick}
+                    onImageClick={onImageClick}
                     onHashtagClick={onHashtagClick}
                     onUserClick={onUserClick}
                   />

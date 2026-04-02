@@ -28,7 +28,7 @@ const Sidebar = ({ currentView, setView, onOpenCreate, onProfileClick, user }: S
   const role     = user?.role    || 'Thành viên';
 
   return (
-    <aside className="hidden md:flex flex-col gap-4 sticky top-24 h-[calc(100vh-120px)] overflow-y-auto">
+    <aside className="hidden md:flex flex-col gap-4 sticky top-24 h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar flex-shrink-0">
       <div className="flex flex-col gap-4 p-4 bg-surface-container-low rounded-xl">
         {/* Profile snippet */}
         <div className="flex items-center gap-3 px-2 mb-4 cursor-pointer" onClick={onProfileClick}>

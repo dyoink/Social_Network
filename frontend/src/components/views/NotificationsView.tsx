@@ -59,12 +59,16 @@ const NotificationItem = ({ notification, onRead, onPostClick, onUserClick }: No
     // 2. Navigate based on type
     const type = notification.notificationType;
     if (['like', 'comment', 'reply', 'reaction'].includes(type ?? '') && notification.entityId) {
+      console.log('NotificationsView: Fetching post for notification:', notification.entityId);
       try {
         const res = await api.getApiPostsId(Number(notification.entityId));
         if (res.success && res.data && onPostClick) {
+          console.log('NotificationsView: Post fetched, calling onPostClick');
           onPostClick(res.data as PostDto);
+        } else {
+          console.warn('NotificationsView: Post fetch failed or onPostClick missing', res);
         }
-      } catch { /* ignore */ }
+      } catch (err) { console.error('NotificationsView: Error fetching post:', err); }
     } else if (type === 'follow' && notification.actor) {
       if (onUserClick) {
         onUserClick({

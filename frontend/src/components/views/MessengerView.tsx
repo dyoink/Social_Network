@@ -92,6 +92,7 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
   const [onlineUserIds,   setOnlineUserIds]   = useState<Set<number>>(new Set());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevConvRef = useRef<number | null>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -280,7 +281,9 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
 
   // Auto scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   // Gửi typing indicator khi gõ
@@ -328,13 +331,13 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
   const otherUser  = activeConv?.participants?.[0];
 
   return (
-    <div className="bg-surface-container-lowest rounded-xl surface-elevation-tonal flex h-[calc(100vh-160px)] overflow-hidden border border-outline-variant/10">
+    <div className="bg-surface-container-lowest rounded-xl surface-elevation-tonal flex h-[calc(100vh-144px)] sticky top-24 overflow-hidden border border-outline-variant/10">
       {/* Conversation list */}
-      <div className="w-1/3 border-r border-surface-container flex flex-col">
-        <div className="p-6 flex items-center justify-between border-b border-surface-container">
+      <div className="w-1/3 border-r border-surface-container flex flex-col h-full overflow-hidden">
+        <div className="p-6 flex items-center justify-between border-b border-surface-container flex-shrink-0">
           <h2 className="text-2xl font-headline font-extrabold tracking-tight">Tin nhắn</h2>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
           {convLoading && (
             <div className="flex justify-center py-8">
               <Loader className="w-5 h-5 animate-spin text-primary" />
@@ -361,7 +364,7 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
       </div>
 
       {/* Chat area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
         {activeConvId === null ? (
           <div className="flex-1 flex items-center justify-center text-outline">
             <div className="text-center">
@@ -372,7 +375,7 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
         ) : (
           <>
             {/* Header */}
-            <header className="p-4 flex items-center justify-between border-b border-surface-container">
+            <header className="p-4 flex items-center justify-between border-b border-surface-container flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <img
@@ -400,7 +403,10 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
             </header>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 flex flex-col">
+            <div 
+              ref={scrollContainerRef}
+              className="flex-1 overflow-y-auto p-6 space-y-4 flex flex-col custom-scrollbar bg-surface-container-low/20"
+            >
               {msgLoading && (
                 <div className="flex justify-center py-8">
                   <Loader className="w-6 h-6 animate-spin text-primary" />
@@ -431,7 +437,7 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
             </div>
 
             {/* Input */}
-            <footer className="p-6 bg-surface-container-low/50 backdrop-blur-md border-t border-surface-container">
+            <footer className="p-6 bg-surface-container-low/50 backdrop-blur-md border-t border-surface-container flex-shrink-0">
               <div className="bg-surface-container-low rounded-full p-2 flex items-center gap-2">
                 <input
                   className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 px-2 text-on-surface placeholder:text-outline"

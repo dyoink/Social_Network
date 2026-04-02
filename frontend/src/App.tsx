@@ -3,10 +3,13 @@ import {
   Search, 
   Bell, 
   User, 
-  Plus
+  Plus,
+  X,
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect } from 'react';
+import { timeAgo } from './utils/time';
 
 // --- Types ---
 import { View, UserProfile } from './types';
@@ -24,6 +27,7 @@ import Sidebar from './components/layout/Sidebar';
 import RightSidebar from './components/layout/RightSidebar';
 import CreatePostModal from './components/feed/CreatePostModal';
 import CommentSidebar from './components/feed/CommentSidebar';
+import PostDetailModal from './components/feed/PostDetailModal';
 import ErrorBoundary from './components/ui/ErrorBoundary';
 
 // --- Views ---
@@ -85,6 +89,8 @@ export default function App() {
   const [messengerTargetUserId, setMessengerTargetUserId] = useState<number | null>(null);
   // Hashtag đang xem
   const [activeHashtag, setActiveHashtag] = useState<string>('');
+  // Global Post Detail Popup (Unifies Lightbox and Notification clicks)
+  const [selectedPostDetail, setSelectedPostDetail] = useState<PostDto | null>(null);
 
   // Profile đang xem — mặc định là profile của chính mình
   const currentUserProfile = user ? mapToUserProfile(user) : null;
@@ -124,10 +130,23 @@ export default function App() {
     setView('hashtag');
   };
 
+  // Log for debugging state
+  useEffect(() => {
+    if (selectedPostDetail) {
+      console.log('App: Opening PostDetailModal for post:', selectedPostDetail.id);
+    }
+  }, [selectedPostDetail]);
+
   // Scroll to top on view change
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // Luôn skip scroll nếu là view messenger để tránh bị giật layout
+    if (currentView !== 'messenger') {
+      window.scrollTo(0, 0);
+    }
     setActiveCommentPost(null);
+    if (currentView !== 'notifications') {
+      setSelectedPostDetail(null);
+    }
     // Reset messenger target khi rời khỏi Messenger
     if (currentView !== 'messenger') setMessengerTargetUserId(null);
   }, [currentView, selectedUser]);
@@ -184,17 +203,17 @@ export default function App() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {currentView === 'newsfeed' && <NewsfeedView onOpenCreate={() => setIsCreateOpen(true)} onCommentClick={setActiveCommentPost} refreshKey={feedRefreshKey} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
-                  {currentView === 'profile' && <ProfileView user={selectedUser ?? undefined} onCommentClick={setActiveCommentPost} onMessageClick={handleMessageUser} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
+                  {currentView === 'newsfeed' && <NewsfeedView onOpenCreate={() => setIsCreateOpen(true)} onCommentClick={setActiveCommentPost} onImageClick={setSelectedPostDetail} refreshKey={feedRefreshKey} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
+                  {currentView === 'profile' && <ProfileView user={selectedUser ?? undefined} onCommentClick={setActiveCommentPost} onImageClick={setSelectedPostDetail} onMessageClick={handleMessageUser} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
                   {currentView === 'messenger' && <MessengerView targetUserId={messengerTargetUserId} />}
-                  {currentView === 'search' && <SearchView onCommentClick={setActiveCommentPost} onUserClick={handleViewProfile} onHashtagClick={handleHashtagClick} />}
+                  {currentView === 'search' && <SearchView onCommentClick={setActiveCommentPost} onImageClick={setSelectedPostDetail} onUserClick={handleViewProfile} onHashtagClick={handleHashtagClick} />}
                   {currentView === 'notifications' && (
                     <NotificationsView 
-                      onPostClick={setActiveCommentPost} 
+                      onPostClick={setSelectedPostDetail} 
                       onUserClick={handleViewProfile} 
                     />
                   )}
-                  {currentView === 'hashtag' && activeHashtag && <HashtagView tag={activeHashtag} onBack={() => setView('newsfeed')} onCommentClick={setActiveCommentPost} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
+                  {currentView === 'hashtag' && activeHashtag && <HashtagView tag={activeHashtag} onBack={() => setView('newsfeed')} onCommentClick={setActiveCommentPost} onImageClick={setSelectedPostDetail} onHashtagClick={handleHashtagClick} onUserClick={handleViewProfile} />}
                   {currentView === 'settings' && <SettingsView onLogout={handleLogout} />}
                   {currentView === 'reels' && <ReelView />}
                 </motion.div>
@@ -237,6 +256,17 @@ export default function App() {
 
           {/* Poke overlay — hiển thị full-screen effect khi nhận poke */}
           <PokeOverlay />
+
+          {/* Global Post Detail Popup (Integrated Media & Comments) */}
+          <AnimatePresence>
+            {selectedPostDetail && (
+              <PostDetailModal
+                post={selectedPostDetail}
+                onClose={() => setSelectedPostDetail(null)}
+                onUserClick={handleViewProfile}
+              />
+            )}
+          </AnimatePresence>
         </>
       )}
     </div>

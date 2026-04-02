@@ -59,7 +59,7 @@ const AdminLayout = ({ activeTab, setTab, onExit, children }: AdminLayoutProps) 
     </nav>
 
     {/* Desktop sidebar */}
-    <aside className="hidden md:flex w-64 bg-surface-container-lowest border-r border-outline-variant/20 flex-col flex-shrink-0">
+    <aside className="hidden md:flex w-64 bg-surface-container-lowest border-r border-outline-variant/20 flex-col flex-shrink-0 sticky top-0 h-screen">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between">
         <div>
