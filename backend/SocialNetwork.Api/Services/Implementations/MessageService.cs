@@ -21,17 +21,22 @@ namespace SocialNetwork.Api.Services.Implementations
 
         public async Task<PagedResult<ConversationDto>> GetConversationsAsync(int userId, int page, int pageSize)
         {
-            // Lấy ID các conversation có userId tham gia
-            var query = _db.ConversationParticipants
-                .Where(cp => cp.UserId == userId)
-                .Select(cp => cp.ConversationId);
+            // Lấy IDs các conversation có userId tham gia, sắp xếp theo thời gian tin nhắn cuối cùng (hoặc thời gian tạo conv nếu chưa có tin nhắn)
+            var query = _db.Conversations
+                .Where(c => c.Participants.Any(p => p.UserId == userId))
+                .Select(c => new
+                {
+                    c.Id,
+                    LastMessageAt = c.Messages.OrderByDescending(m => m.CreatedAt).Select(m => (DateTime?)m.CreatedAt).FirstOrDefault() ?? c.CreatedAt
+                });
 
             var totalCount = await query.CountAsync();
 
             var convIds = await query
-                .OrderByDescending(id => id) // gần đây nhất trước (tạm dùng ID)
+                .OrderByDescending(x => x.LastMessageAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
+                .Select(x => x.Id)
                 .ToListAsync();
 
             // Load conversations với participants + last message
@@ -50,7 +55,7 @@ namespace SocialNetwork.Api.Services.Implementations
 
             var unreadMap = unreadCounts.ToDictionary(x => x.ConversationId, x => x.Count);
 
-            // Sắp xếp lại theo thứ tự convIds (đã được sort)
+            // Sắp xếp lại theo đúng thứ tự convIds
             var dtos = convIds
                 .Select(id => conversations.FirstOrDefault(c => c.Id == id))
                 .Where(c => c != null)
@@ -58,6 +63,27 @@ namespace SocialNetwork.Api.Services.Implementations
                 .ToList();
 
             return PagedResult<ConversationDto>.Create(dtos, totalCount, page, pageSize);
+        }
+
+        // ─── DeleteConversationAsync ───────────────────────────────────────────
+
+        public async Task DeleteConversationAsync(int conversationId, int userId)
+        {
+            // Kiểm tra user có phải thành viên không
+            var isMember = await _db.ConversationParticipants
+                .AnyAsync(cp => cp.ConversationId == conversationId && cp.UserId == userId);
+            
+            if (!isMember)
+                throw new UnauthorizedAccessException("Bạn không có quyền xóa cuộc trò chuyện này.");
+
+            // Ở đây ta xóa hẳn conversation (và cascade xóa participants, messages)
+            // Nếu muốn "xóa cho riêng tôi" thì cần logic phức tạp hơn (IsDeleted per participant)
+            var conv = await _db.Conversations.FindAsync(conversationId);
+            if (conv != null)
+            {
+                _db.Conversations.Remove(conv);
+                await _db.SaveChangesAsync();
+            }
         }
 
         // ─── GetOrCreateConversationAsync ─────────────────────────────────────

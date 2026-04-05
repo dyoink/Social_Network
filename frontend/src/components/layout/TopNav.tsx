@@ -38,6 +38,10 @@ const TopNav = ({ currentView, setView, onProfileClick, onLogout, user }: TopNav
       setMsgCount(prev => prev + 1);
     };
 
+    // Đăng ký listeners
+    notifConn.on('ReceiveNotification', onReceiveNotification);
+    chatConn.on('ConversationUpdated', onConversationUpdated);
+
     // Lắng nghe event local để giảm count khi đọc
     const onNotificationRead = (e: any) => {
       const { all } = e.detail || {};

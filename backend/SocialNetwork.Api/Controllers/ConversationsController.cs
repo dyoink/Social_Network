@@ -122,5 +122,16 @@ namespace SocialNetwork.Api.Controllers
             var count = await _messageService.GetUnreadCountAsync(CurrentUserId);
             return Ok(ApiResponse<UnreadCountDto>.Ok(new UnreadCountDto { Count = count }));
         }
+
+        // ─── DELETE /api/conversations/{id} ────────────────────────────────────
+
+        /// <summary>Xóa cuộc trò chuyện.</summary>
+        [HttpDelete("{id:int}")]
+        [ProducesResponseType<ApiResponse>(200)]
+        public async Task<IActionResult> DeleteConversation(int id)
+        {
+            await _messageService.DeleteConversationAsync(id, CurrentUserId);
+            return Ok(ApiResponse.Ok("Đã xóa cuộc trò chuyện."));
+        }
     }
 }

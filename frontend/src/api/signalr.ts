@@ -66,6 +66,34 @@ export function getPokeConnection(): signalR.HubConnection {
 
 // ─── Connection Lifecycle ──────────────────────────────────────────────────────
 
+const reconnectedListeners = new Set<(connectionId?: string) => void>();
+
+const setupLogging = (conn: signalR.HubConnection, name: string) => {
+  conn.onreconnecting((err) => {
+    console.warn(`[SignalR] ${name} reconnecting...`, err);
+  });
+  conn.onreconnected((connectionId) => {
+    console.log(`[SignalR] ${name} reconnected. ID: ${connectionId}`);
+    if (name === 'ChatHub') {
+      reconnectedListeners.forEach(listener => listener(connectionId));
+    }
+  });
+  conn.onclose((err) => {
+    console.error(`[SignalR] ${name} connection closed.`, err);
+  });
+};
+
+/**
+ * Đăng ký listener cho sự kiện reconnected của ChatHub.
+ * Trả về hàm để unregister.
+ */
+export function addChatReconnectedListener(listener: (connectionId?: string) => void): () => void {
+  reconnectedListeners.add(listener);
+  return () => {
+    reconnectedListeners.delete(listener);
+  };
+}
+
 /**
  * Khởi động tất cả SignalR connections. Gọi 1 lần sau khi user đăng nhập.
  */
@@ -74,16 +102,22 @@ export async function startAllConnections(): Promise<void> {
   const notif = getNotificationConnection();
   const poke = getPokeConnection();
 
+  setupLogging(chat, 'ChatHub');
+  setupLogging(notif, 'NotificationHub');
+  setupLogging(poke, 'PokeHub');
+
   const startIfNeeded = async (conn: signalR.HubConnection, name: string) => {
     if (conn.state === signalR.HubConnectionState.Disconnected) {
       try {
         await conn.start();
-        console.log(`[SignalR] ${name} connected`);
+        console.log(`[SignalR] ${name} connected. ID: ${conn.connectionId}`);
       } catch (err) {
         console.error(`[SignalR] ${name} failed to connect:`, err);
-        // Retry sau 5s
+        // Retry sau 5s nếu vẫn disconnected
         setTimeout(() => startIfNeeded(conn, name), 5000);
       }
+    } else {
+      console.log(`[SignalR] ${name} is already ${conn.state}`);
     }
   };
 

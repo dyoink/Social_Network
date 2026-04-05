@@ -22,5 +22,8 @@ namespace SocialNetwork.Api.Services.Interfaces
 
         /// <summary>Tổng số tin nhắn chưa đọc trên tất cả conversation.</summary>
         Task<int> GetUnreadCountAsync(int userId);
+
+        /// <summary>Xóa conversation cho user hiện tại (soft delete hoặc xóa hẳn tùy logic).</summary>
+        Task DeleteConversationAsync(int conversationId, int userId);
     }
 }

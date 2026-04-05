@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowRight, Loader, AlertCircle, MessageSquare } from 'lucide-react';
+import { ArrowRight, Loader, AlertCircle, MessageSquare, Trash2 } from 'lucide-react';
 import { getSocialNetworkApiV1, type ConversationDto, type MessageDto } from '../../api/api-generated';
-import { getChatConnection } from '../../api/signalr';
+import apiAxios from '../../api/axios';
+import { getChatConnection, addChatReconnectedListener } from '../../api/signalr';
 import useAuthStore from '../../store/authStore';
 import { timeAgo } from '../../utils/time';
 
@@ -13,9 +14,10 @@ interface ConversationItemProps {
   currentUserId: number;
   onlineUserIds: Set<number>;
   onClick: () => void;
+  onDelete: (e: React.MouseEvent) => void;
 }
 
-const ConversationItem = ({ conv, active, currentUserId, onlineUserIds, onClick }: ConversationItemProps) => {
+const ConversationItem = ({ conv, active, currentUserId, onlineUserIds, onClick, onDelete }: ConversationItemProps) => {
   const other  = conv.participants?.[0];
   const name   = other?.fullName || other?.username || 'Unknown';
   const avatar = other?.avatarUrl || `https://picsum.photos/seed/${other?.id}/50/50`;
@@ -26,7 +28,7 @@ const ConversationItem = ({ conv, active, currentUserId, onlineUserIds, onClick 
 
   return (
     <div
-      className={`p-4 rounded-xl flex gap-4 cursor-pointer transition-all ${active ? 'bg-surface-container-lowest shadow-sm border-l-4 border-primary' : 'hover:bg-surface-container-lowest'}`}
+      className={`p-4 rounded-xl flex gap-4 cursor-pointer transition-all group relative ${active ? 'bg-surface-container-lowest shadow-sm border-l-4 border-primary' : 'hover:bg-surface-container-lowest'}`}
       onClick={onClick}
     >
       <div className="relative flex-shrink-0">
@@ -42,14 +44,25 @@ const ConversationItem = ({ conv, active, currentUserId, onlineUserIds, onClick 
             {conv.lastMessage?.createdAt ? timeAgo(conv.lastMessage.createdAt) : ''}
           </span>
         </div>
-        <p className={`text-sm truncate ${active ? 'text-on-surface-variant font-medium' : 'text-outline'}`}>
-          {isMine ? 'Bạn: ' : ''}{lastMsg}
-        </p>
-        {unreadCount > 0 && !active && (
-          <span className="inline-block bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-0.5">
-            {conv.unreadCount}
-          </span>
-        )}
+        <div className="flex justify-between items-center gap-2">
+          <p className={`text-sm truncate flex-1 ${active ? 'text-on-surface-variant font-medium' : 'text-outline'}`}>
+            {isMine ? 'Bạn: ' : ''}{lastMsg}
+          </p>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {unreadCount > 0 && !active && (
+              <span className="inline-block bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                {conv.unreadCount}
+              </span>
+            )}
+            <button
+              onClick={onDelete}
+              className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-error/10 text-outline hover:text-error rounded-full transition-all"
+              title="Xóa cuộc trò chuyện"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -102,29 +115,50 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
   // ─── SignalR event listeners ───────────────────────────────────────────────
   const onReceiveMessage = useCallback((msg: MessageDto) => {
     // Chỉ append nếu tin nhắn thuộc conversation đang mở
-    setMessages(prev => {
-      // Tránh duplicate (nếu gửi từ chính mình qua REST đã append)
-      if (prev.some(m => m.id === msg.id)) return prev;
-      return [...prev, msg];
+    if (activeConvId !== null && Number(msg.conversationId) === activeConvId) {
+      setMessages(prev => {
+        // Tránh duplicate (nếu gửi từ chính mình qua REST đã append)
+        if (prev.some(m => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+    }
+    
+    // Cập nhật last message và đẩy lên đầu
+    setConversations(prev => {
+      const targetIdx = prev.findIndex(c => Number(c.id) === Number(msg.conversationId));
+      if (targetIdx === -1) {
+        // Nếu chưa có (hiếm), có thể reload list hoặc ignore. Tạm thời ignore.
+        return prev;
+      }
+      const updated = { 
+        ...prev[targetIdx], 
+        lastMessage: msg, 
+        unreadCount: Number(prev[targetIdx].id) === activeConvId ? 0 : (Number(prev[targetIdx].unreadCount ?? 0) + 1) 
+      };
+      const filtered = prev.filter((_, i) => i !== targetIdx);
+      return [updated, ...filtered];
     });
-    // Cập nhật last message trong sidebar
-    setConversations(prev =>
-      prev.map(c => Number(c.id) === msg.conversationId
-        ? { ...c, lastMessage: msg }
-        : c
-      )
-    );
     setTypingUser(null);
-  }, []);
+  }, [activeConvId]);
 
   const onConversationUpdated = useCallback((data: { conversationId: number; lastMessage: MessageDto }) => {
-    setConversations(prev =>
-      prev.map(c => Number(c.id) === data.conversationId
-        ? { ...c, lastMessage: data.lastMessage, unreadCount: (Number(c.unreadCount ?? 0)) + 1 }
-        : c
-      )
-    );
-  }, []);
+    // Chỉ xử lý nếu conversationId khác với activeConvId
+    // (Vì activeConvId đã được onReceiveMessage xử lý hoặc là conversation hiện tại đang mở)
+    if (activeConvId !== null && Number(data.conversationId) === activeConvId) return;
+
+    setConversations(prev => {
+      const targetIdx = prev.findIndex(c => Number(c.id) === Number(data.conversationId));
+      if (targetIdx === -1) return prev;
+      
+      const updated = { 
+        ...prev[targetIdx], 
+        lastMessage: data.lastMessage, 
+        unreadCount: (Number(prev[targetIdx].unreadCount ?? 0)) + 1 
+      };
+      const filtered = prev.filter((_, i) => i !== targetIdx);
+      return [updated, ...filtered];
+    });
+  }, [activeConvId]);
 
   const onUserTyping = useCallback((data: { userId: number; conversationId: number }) => {
     if (data.userId !== currentUserId) {
@@ -211,42 +245,83 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
   }, [targetUserId, convLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Join/Leave SignalR group khi chuyển conversation
-  useEffect(() => {
-    const chatConn = getChatConnection();
-    const prev = prevConvRef.current;
+  const manageGroups = useCallback(async (convId: number | null, prevId: number | null) => {
+    if (chatConn.state !== 'Connected') return;
 
-    const manageGroups = async () => {
-      // Đảm bảo connection đã start trước khi invoke
-      if (chatConn.state !== 'Connected') {
-        // Nếu đang connecting hoặc disconnected, đợi một chút rồi thử lại
-        return;
+    try {
+      if (prevId !== null && prevId !== convId) {
+        console.log(`[SignalR] Leaving conversation ${prevId}`);
+        await chatConn.invoke('LeaveConversation', prevId);
       }
+      if (convId !== null) {
+        console.log(`[SignalR] Joining conversation ${convId}`);
+        await chatConn.invoke('JoinConversation', convId);
+      }
+      prevConvRef.current = convId;
+    } catch (err) {
+      console.error('[SignalR] Error managing groups:', err);
+    }
+  }, [chatConn]);
 
-      try {
-        if (prev !== null && prev !== activeConvId) {
-          await chatConn.invoke('LeaveConversation', prev);
-        }
-        if (activeConvId !== null) {
-          await chatConn.invoke('JoinConversation', activeConvId);
-        }
-        prevConvRef.current = activeConvId;
-      } catch (err) {
-        console.error('[SignalR] Error managing groups:', err);
+  useEffect(() => {
+    manageGroups(activeConvId, prevConvRef.current);
+  }, [activeConvId, manageGroups]);
+
+  // Đăng ký SignalR events 1 lần
+  useEffect(() => {
+    chatConn.on('ReceiveMessage', onReceiveMessage);
+    chatConn.on('ConversationUpdated', onConversationUpdated);
+    chatConn.on('UserTyping', onUserTyping);
+    chatConn.on('UserStopTyping', onUserStopTyping);
+
+    const onUserOnline = (userId: number) => {
+      setOnlineUserIds(prev => new Set(prev).add(userId));
+    };
+    const onUserOffline = (userId: number) => {
+      setOnlineUserIds(prev => { const s = new Set(prev); s.delete(userId); return s; });
+    };
+    chatConn.on('UserOnline', onUserOnline);
+    chatConn.on('UserOffline', onUserOffline);
+
+    // Xử lý reconnection: rejoin group
+    const handleReconnected = () => {
+      console.log('[SignalR] Messenger reconnected. Re-joining conversation group...');
+      const currentId = activeConvId;
+      // Reset ref để force rejoin
+      prevConvRef.current = null;
+      if (currentId !== null) {
+        manageGroups(currentId, null);
       }
     };
+    const unregisterReconnected = addChatReconnectedListener(handleReconnected);
 
-    manageGroups();
-    
-    // Nếu connection chưa sẵn sàng, lắng nghe event onreconnected hoặc đợi state change
-    // Ở đây ta dùng interval đơn giản để retry nếu activeConvId thay đổi mà chưa join được
+    // Lấy danh sách online hiện tại
+    if (chatConn.state === 'Connected') {
+      chatConn.invoke('GetOnlineUsers')
+        .then((ids: number[]) => setOnlineUserIds(new Set(ids)))
+        .catch(() => {});
+    }
+
+    return () => {
+      chatConn.off('ReceiveMessage', onReceiveMessage);
+      chatConn.off('ConversationUpdated', onConversationUpdated);
+      chatConn.off('UserTyping', onUserTyping);
+      chatConn.off('UserStopTyping', onUserStopTyping);
+      chatConn.off('UserOnline', onUserOnline);
+      chatConn.off('UserOffline', onUserOffline);
+      unregisterReconnected();
+    };
+  }, [chatConn, onReceiveMessage, onConversationUpdated, onUserTyping, onUserStopTyping, activeConvId, manageGroups]);
+
+  // Interval để đảm bảo group đã join nếu connection khởi động chậm
+  useEffect(() => {
     const timer = setInterval(() => {
       if (chatConn.state === 'Connected' && prevConvRef.current !== activeConvId) {
-        manageGroups();
+        manageGroups(activeConvId, prevConvRef.current);
       }
-    }, 2000);
-
+    }, 3000);
     return () => clearInterval(timer);
-  }, [activeConvId]);
+  }, [activeConvId, manageGroups, chatConn.state]);
 
   // Load messages khi chọn conversation
   useEffect(() => {
@@ -317,13 +392,34 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
         if (res.success && res.data) {
           setMessages(prev => [...prev, res.data!]);
           setNewMessage('');
-          setConversations(prev =>
-            prev.map(c => Number(c.id) === activeConvId ? { ...c, lastMessage: res.data } : c)
-          );
+          setConversations(prev => {
+            const targetIdx = prev.findIndex(c => Number(c.id) === activeConvId);
+            if (targetIdx === -1) return prev;
+            const updated = { ...prev[targetIdx], lastMessage: res.data };
+            const filtered = prev.filter((_, i) => i !== targetIdx);
+            return [updated, ...filtered];
+          });
         }
       } catch { /* ignore */ }
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation(); // Ngừng bubble tới onClick của cha
+    if (!window.confirm('Bạn có chắc chắn muốn xóa cuộc trò chuyện này không?')) return;
+
+    try {
+      await apiAxios.delete(`/api/Conversations/${id}`);
+      setConversations(prev => prev.filter(c => Number(c.id) !== id));
+      if (activeConvId === id) {
+        setActiveConvId(null);
+        setMessages([]);
+      }
+    } catch (err) {
+      console.error('Lỗi khi xóa cuộc trò chuyện:', err);
+      alert('Không thể xóa cuộc trò chuyện.');
     }
   };
 
@@ -357,6 +453,7 @@ const MessengerView = ({ targetUserId }: MessengerViewProps = {}) => {
                 currentUserId={currentUserId}
                 onlineUserIds={onlineUserIds}
                 onClick={() => setActiveConvId(Number(conv.id))}
+                onDelete={(e) => handleDelete(e, Number(conv.id))}
               />
             </React.Fragment>
           ))}
