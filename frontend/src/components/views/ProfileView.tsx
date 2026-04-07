@@ -731,6 +731,17 @@ const ProfileView = ({ user, onCommentClick, onImageClick, onMessageClick, onHas
         </div>
       )}
 
+      {/* Users Modal */}
+      {userId && (
+        <UsersModal
+          userId={userId}
+          type={usersModalType}
+          isOpen={showUsersModal}
+          onClose={() => setShowUsersModal(false)}
+          onUserClick={onUserClick}
+        />
+      )}
+
       {/* Poke Modal */}
       {userId && (internalUser || user) && (
         <PokeModal
